@@ -1,5 +1,5 @@
 from django.shortcuts import render , redirect
-from post.models import Post , Domain
+from post.models import Post ,  Domain , UserPreference , PostRecommendation
 
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
@@ -15,6 +15,11 @@ from django.contrib.auth import authenticate, login , logout
 
 from django.core.cache import cache
 import hashlib
+
+import numpy as np
+from django.db.models import Count, Q
+from collections import defaultdict
+from django.utils import timezone
 
 BYTEZ_KEY = "ed333e5f71baeb5a3f75b54b3db52102"
 sdk = Bytez(BYTEZ_KEY)
@@ -94,9 +99,34 @@ def create_post(request):
         return redirect('index')
 
     return render(request, "post/form_post.html") 
+# views.py - Modifie la vue all_post existante
+
 def all_post(request):
-    posts = Post.objects.all().order_by('-created_at')
-    return render(request, 'post/all_post.html', context={'posts': posts})
+    """Affiche les posts avec recommandations personnalisées"""
+    if request.user.is_authenticated:
+        # Récupérer les posts recommandés pour l'utilisateur
+        recommended_posts = recommendation_engine.get_personalized_recommendations(request.user, limit=10)
+        
+        # Récupérer les IDs des posts recommandés pour éviter les doublons
+        recommended_ids = [post.id for post in recommended_posts]
+        
+        # Récupérer d'autres posts récents (excluant ceux déjà recommandés)
+        other_posts = Post.objects.exclude(id__in=recommended_ids).order_by('-created_at')[:10]
+        
+        # Combiner : d'abord les recommandés, puis les autres
+        posts = list(recommended_posts) + list(other_posts)
+        
+        # Indiquer quels posts sont recommandés pour le template
+        recommended_post_ids = set(recommended_ids)
+    else:
+        # Pour utilisateurs non connectés : posts populaires
+        posts = recommendation_engine.get_popular_posts(limit=20)
+        recommended_post_ids = set()
+    
+    return render(request, 'post/all_post.html', {
+        'posts': posts,
+        'recommended_post_ids': recommended_post_ids
+    })
 
 def detail_post(request, slug):
     post = Post.objects.get(slug=slug)
@@ -476,3 +506,313 @@ def logout_user(request):
     logout(request)
     messages.success(request, "Tu es déconnecté.")
     return redirect("user_login")
+
+"""
+Creation de Systeme de recommandation
+"""
+# views.py - Ajoute ces fonctions après le code du quiz
+
+import numpy as np
+from django.db.models import Count, Q
+from collections import defaultdict
+
+class RecommendationEngine:
+    """Moteur de recommandation optimisé"""
+    
+    def __init__(self):
+        self.decay_factor = 0.95  # Facteur de dégradation des anciennes actions
+        self.min_relevance = 0.1  # Seuil minimal de pertinence
+        
+    def update_user_preferences(self, user, post, action_type):
+        """
+        Met à jour les préférences utilisateur après un like/dislike
+        action_type: 'like' ou 'dislike'
+        """
+        try:
+            # Récupérer les tags du post
+            tags = post.tags.all()
+            
+            # Poids selon l'action
+            weight = 1.0 if action_type == 'like' else -0.5
+            
+            for tag in tags:
+                # Mettre à jour ou créer la préférence
+                pref, created = UserPreference.objects.get_or_create(
+                    user=user,
+                    tag=tag,
+                    defaults={'score': weight}
+                )
+                
+                if not created:
+                    # Appliquer un facteur de décroissance pour les anciennes préférences
+                    current_score = pref.score
+                    decayed_score = current_score * self.decay_factor
+                    
+                    # Ajouter le nouveau poids (avec décroissance)
+                    new_score = decayed_score + weight
+                    
+                    # Limiter les scores extrêmes
+                    pref.score = max(-5.0, min(5.0, new_score))
+                    pref.save()
+            
+            # Invalider le cache de recommandations
+            self.invalidate_recommendation_cache(user)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Erreur mise à jour préférences: {e}")
+            return False
+    
+    def invalidate_recommendation_cache(self, user):
+        """Invalide le cache des recommandations pour un utilisateur"""
+        cache_key = f"user_recommendations_{user.id}"
+        cache.delete(cache_key)
+        
+        # Supprimer aussi les recommandations en base si existent
+        PostRecommendation.objects.filter(user=user).delete()
+    
+    def get_user_preference_score(self, user, tag):
+        """Récupère le score de préférence d'un utilisateur pour un tag"""
+        try:
+            pref = UserPreference.objects.get(user=user, tag=tag)
+            return pref.score
+        except UserPreference.DoesNotExist:
+            return 0.0
+    
+    def calculate_post_relevance(self, user, post):
+        """
+        Calcule la pertinence d'un post pour un utilisateur
+        Basé sur les tags, popularité et fraîcheur
+        """
+        if not user.is_authenticated:
+            return self.calculate_baseline_relevance(post)
+        
+        try:
+            relevance_score = 0.0
+            
+            # 1. Score basé sur les tags
+            tag_score = 0.0
+            tags = post.tags.all()
+            
+            if tags.exists():
+                for tag in tags:
+                    tag_score += self.get_user_preference_score(user, tag)
+                
+                # Normaliser par le nombre de tags
+                tag_score = tag_score / len(tags)
+            
+            # 2. Score basé sur la popularité (likes - dislikes)
+            like_count = post.likes.count()
+            dislike_count = post.dislikes.count()
+            popularity_score = (like_count - dislike_count) / max(1, like_count + dislike_count)
+            
+            # 3. Score basé sur la fraîcheur
+            days_old = (timezone.now() - post.created_at).days
+            freshness_score = 1.0 / (1 + days_old)  # Décroissance avec le temps
+            
+            # 4. Score de crédibilité (basé sur l'analyse IA et fake news)
+            credibility_score = 0.0
+            if post.made_ai is not None and post.fake_news is not None:
+                # Moins de probabilité IA = mieux
+                ai_score = 1.0 - (post.made_ai / 100.0)
+                # Moins de fake news = mieux
+                fake_score = 1.0 - (post.fake_news / 100.0)
+                credibility_score = (ai_score + fake_score) / 2.0
+            
+            # Combinaison pondérée des scores
+            relevance_score = (
+                0.4 * tag_score +          # Préférences utilisateur
+                0.2 * popularity_score +   # Popularité
+                0.2 * freshness_score +    # Fraîcheur
+                0.2 * credibility_score    # Crédibilité
+            )
+            
+            return relevance_score
+            
+        except Exception as e:
+            print(f"Erreur calcul pertinence: {e}")
+            return 0.0
+    
+    def calculate_baseline_relevance(self, post):
+        """Calcul de pertinence pour utilisateurs non connectés"""
+        # Basé sur popularité et fraîcheur
+        like_count = post.likes.count()
+        dislike_count = post.dislikes.count()
+        popularity_score = (like_count - dislike_count) / max(1, like_count + dislike_count)
+        
+        days_old = (timezone.now() - post.created_at).days
+        freshness_score = 1.0 / (1 + days_old)
+        
+        return 0.7 * popularity_score + 0.3 * freshness_score
+    
+    def get_personalized_recommendations(self, user, limit=20):
+        """
+        Retourne les posts les plus pertinents pour un utilisateur
+        Utilise le cache pour optimiser les performances
+        """
+        if not user.is_authenticated:
+            # Pour utilisateurs non connectés, retourner les plus populaires
+            return self.get_popular_posts(limit)
+        
+        cache_key = f"user_recommendations_{user.id}"
+        cached_posts = cache.get(cache_key)
+        
+        if cached_posts:
+            return cached_posts
+        
+        try:
+            # Récupérer tous les posts (avec préfetch pour optimiser)
+            posts = Post.objects.all().select_related(
+                'author'
+            ).prefetch_related(
+                'tags', 'likes', 'dislikes'
+            ).order_by('-created_at')[:200]  # Limiter pour performance
+            
+            # Calculer les scores de pertinence
+            scored_posts = []
+            for post in posts:
+                score = self.calculate_post_relevance(user, post)
+                if score >= self.min_relevance:
+                    scored_posts.append((score, post))
+            
+            # Trier par score décroissant
+            scored_posts.sort(key=lambda x: x[0], reverse=True)
+            
+            # Prendre les meilleurs
+            recommended_posts = [post for score, post in scored_posts[:limit]]
+            
+            # Mettre en cache pour 1 heure
+            cache.set(cache_key, recommended_posts, 3600)
+            
+            # Sauvegarder dans la base pour historique
+            try:
+                recommendation = PostRecommendation.objects.create(
+                    user=user,
+                    cache_key=cache_key
+                )
+                recommendation.recommended_posts.set(recommended_posts[:10])
+            except:
+                pass  # Ignorer les erreurs de sauvegarde historique
+            
+            return recommended_posts
+            
+        except Exception as e:
+            print(f"Erreur recommandations: {e}")
+            return self.get_fallback_posts(limit)
+    
+    def get_popular_posts(self, limit=20):
+        """Posts populaires (likes - dislikes)"""
+        try:
+            # Annoter avec un score de popularité
+            posts = Post.objects.annotate(
+                popularity=Count('likes') - Count('dislikes')
+            ).order_by('-popularity', '-created_at')[:limit]
+            
+            return list(posts)
+        except:
+            return self.get_fallback_posts(limit)
+    
+    def get_fallback_posts(self, limit=20):
+        """Fallback: posts récents"""
+        return list(Post.objects.all().order_by('-created_at')[:limit])
+
+# Initialiser le moteur de recommandation
+recommendation_engine = RecommendationEngine()
+@login_required
+@csrf_exempt
+def toggle_like(request, post_id):
+    """Gère les likes d'un post"""
+    try:
+        post = Post.objects.get(id=post_id)
+        user = request.user
+        
+        if user in post.likes.all():
+            # Retirer le like
+            post.likes.remove(user)
+            # Mettre à jour les préférences (annulation)
+            recommendation_engine.update_user_preferences(user, post, 'unlike')
+            liked = False
+        else:
+            # Ajouter le like et retirer le dislike si présent
+            post.likes.add(user)
+            if user in post.dislikes.all():
+                post.dislikes.remove(user)
+            # Mettre à jour les préférences
+            recommendation_engine.update_user_preferences(user, post, 'like')
+            liked = True
+        
+        # Retourner les nouveaux counts
+        return JsonResponse({
+            'success': True,
+            'liked': liked,
+            'like_count': post.likes.count(),
+            'dislike_count': post.dislikes.count()
+        })
+        
+    except Post.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Post not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@csrf_exempt
+def toggle_dislike(request, post_id):
+    """Gère les dislikes d'un post"""
+    try:
+        post = Post.objects.get(id=post_id)
+        user = request.user
+        
+        if user in post.dislikes.all():
+            # Retirer le dislike
+            post.dislikes.remove(user)
+            # Mettre à jour les préférences (annulation)
+            recommendation_engine.update_user_preferences(user, post, 'undislike')
+            disliked = False
+        else:
+            # Ajouter le dislike et retirer le like si présent
+            post.dislikes.add(user)
+            if user in post.likes.all():
+                post.likes.remove(user)
+            # Mettre à jour les préférences
+            recommendation_engine.update_user_preferences(user, post, 'dislike')
+            disliked = True
+        
+        # Retourner les nouveaux counts
+        return JsonResponse({
+            'success': True,
+            'disliked': disliked,
+            'like_count': post.likes.count(),
+            'dislike_count': post.dislikes.count()
+        })
+        
+    except Post.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Post not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def get_recommendations(request):
+    """Retourne les posts recommandés"""
+    if request.user.is_authenticated:
+        posts = recommendation_engine.get_personalized_recommendations(request.user, limit=20)
+    else:
+        posts = recommendation_engine.get_popular_posts(limit=20)
+    
+    return render(request, 'post/recommendations.html', context={'posts': posts})
+
+def get_user_preferences(request):
+
+    """API pour récupérer les préférences de l'utilisateur (pour debugging)"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    preferences = UserPreference.objects.filter(user=request.user).order_by('-score')[:10]
+    
+    data = [{
+        'tag': pref.tag.name,
+        'score': pref.score,
+        'last_updated': pref.last_updated.strftime('%Y-%m-%d %H:%M')
+    } for pref in preferences]
+    
+    return JsonResponse({'preferences': data})
+

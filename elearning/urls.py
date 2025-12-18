@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from post.views import index , create_post , all_post ,detail_post ,view_api_response , quiz_page , generate_quiz , register_user , user_login , logout_user
+from post.views import index , create_post , all_post ,detail_post ,view_api_response , quiz_page , generate_quiz , register_user , user_login , logout_user , toggle_like , toggle_dislike
 
 # Permettre à Django de lire les fichiers média en mode développement
 from django.conf import settings
@@ -35,7 +35,10 @@ urlpatterns = [
     path('register/', register_user, name='register_user'),
     path('login/' , user_login, name='user_login'),
     path('logout/' , logout_user, name='logout_user'),
-
+    
+    path('post/<int:post_id>/like/', toggle_like, name='toggle_like'),
+    path('post/<int:post_id>/dislike/', toggle_dislike, name='toggle_dislike'),
+    
 
 ]
 
