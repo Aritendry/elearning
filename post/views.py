@@ -9,6 +9,11 @@ from django.http import JsonResponse
 from bytez import Bytez
 from django.views.decorators.csrf import csrf_exempt
 
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login , logout
+
+
 BYTEZ_KEY = "ed333e5f71baeb5a3f75b54b3db52102"
 sdk = Bytez(BYTEZ_KEY)
 model = sdk.model("Qwen/Qwen3-4B-Instruct-2507")
@@ -198,3 +203,55 @@ def generate_quiz(request):
 
 def quiz_page(request):
     return render(request, "post/quiz.html")
+
+"""
+Creation du CRUD utilisateur
+"""
+def register_user(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        password2 = request.POST.get("password2")
+
+        if not username or not email or not password or not password2:
+            messages.error(request, "Tous les champs sont requis.")
+            return redirect("register_user")
+
+        if password != password2:
+            messages.error(request, "Les mots de passe ne correspondent pas.")
+            return redirect("register_user")
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Ce pseudo est déjà utilisé.")
+            return redirect("register_user")
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Cet email est déjà utilisé.")
+            return redirect("register_user")
+        # création de l'utilisateur
+        user = User.objects.create_user(username=username, email=email, password=password)
+        user.save()
+        messages.success(request, "Compte créé avec succès ! Tu peux maintenant te connecter.")
+        return redirect("user_login")  # tu peux mettre la page de login ici
+
+    return render(request, "post/register.html")    
+
+def user_login(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)  # <- ici tu passes bien l'utilisateur
+            return redirect("index")  # page après login
+        else:
+            messages.error(request, "Identifiant ou mot de passe incorrect")
+            return redirect("user_login")
+
+    return render(request, "post/login.html")
+
+def logout_user(request):
+    logout(request)
+    messages.success(request, "Tu es déconnecté.")
+    return redirect("user_login")

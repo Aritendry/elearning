@@ -6,10 +6,20 @@
     <title>elearning</title>
 </head>
 <body>
-    <a href="{% url 'create_post' %}">Créer un post</a>
-    <a href="{% url 'all_post' %}">Voir tous les posts</a>
-    <a href="{% url 'test_api' %}">Test API</a>
-    <a href="{% url 'quiz_page' %}">Quiz</a>
+<nav>
+    {% if user.is_authenticated %}
+        <span>Connecté en tant que : {{ user.username }}</span>
+        <a href="{% url 'create_post' %}">Créer un post</a>
+        <a href="{% url 'all_post' %}">Voir tous les posts</a>
+        <a href="{% url 'test_api' %}">Test API</a>
+        <a href="{% url 'quiz_page' %}">Quiz</a>
+        <a href="{% url 'logout_user' %}">Se déconnecter</a>
+    {% else %}
+        <a href="{% url 'user_login' %}">Se connecter</a>
+        <a href="{% url 'register_user' %}">S'inscrire</a>
+    {% endif %}
+</nav>
+
     {% block content %}
 
     {% endblock %}

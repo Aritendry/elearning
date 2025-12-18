@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from post.views import index , create_post , all_post ,detail_post ,view_api_response , quiz_page , generate_quiz
+from post.views import index , create_post , all_post ,detail_post ,view_api_response , quiz_page , generate_quiz , register_user , user_login , logout_user
 
 # Permettre à Django de lire les fichiers média en mode développement
 from django.conf import settings
@@ -32,7 +32,10 @@ urlpatterns = [
     path('test_api/', view_api_response, name='test_api'),
     path('quiz/', quiz_page, name='quiz_page'),
     path('quiz/generate/', generate_quiz, name='generate_quiz'),
-    
+    path('register/', register_user, name='register_user'),
+    path('login/' , user_login, name='user_login'),
+    path('logout/' , logout_user, name='logout_user'),
+
 
 ]
 

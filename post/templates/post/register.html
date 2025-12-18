@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="register-container">
+    <h2>Créer un compte</h2>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="POST" action="">
+        {% csrf_token %}
+        <div>
+            <label for="username">Pseudo</label>
+            <input type="text" name="username" id="username" required>
+        </div>
+
+        <div>
+            <label for="email">Email</label>
+            <input type="email" name="email" id="email" required>
+        </div>
+
+        <div>
+            <label for="password">Mot de passe</label>
+            <input type="password" name="password" id="password" required>
+        </div>
+
+        <div>
+            <label for="password2">Confirmer le mot de passe</label>
+            <input type="password" name="password2" id="password2" required>
+        </div>
+
+        <button type="submit">S'inscrire</button>
+    </form>
+
+    <p>Déjà un compte ? <a href="{% url 'user_login' %}">Connecte-toi ici</a>.</p>
+</div>
+{% endblock %}
