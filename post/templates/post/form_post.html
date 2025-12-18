@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <label>Titre</label>
+    <input type="text" name="title" required>
+
+    <label>Contenu</label>
+    <textarea name="content" required></textarea>
+
+    <label>Fichier (image ou vidéo)</label>
+    <input type="file" name="media">
+
+    <button type="submit">Publier</button>
+</form>
+
+{% endblock %}

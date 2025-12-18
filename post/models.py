@@ -9,3 +9,6 @@ class Post(models.Model):
     media = models.FileField(upload_to='media/' , blank=True , null=True)
     slug = models.SlugField(max_length=150 , unique=True , blank=False , null=False)
     author = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Title : {self.title} , Author : {self.author.username} , Created at : {self.created_at}"
