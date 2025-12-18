@@ -6,7 +6,11 @@
 {% for post in posts %}
   <div style="margin-bottom: 40px; border-bottom: 1px solid #ccc; padding-bottom: 20px;">
 
-
+    <h2>
+      <a href="{% url 'detail_post' slug=post.slug %}">
+        {{ post.title }}
+      </a>
+    </h2>
 
     <p>{{ post.content|truncatechars:120 }}</p>
 
@@ -21,9 +25,15 @@
     {% endif %}
 
     <p>
-      Par <strong>{{ post.author.username }}</strong> —
-      {{ post.created_at }}
+      Par <strong>{{ post.author.username }}</strong> — {{ post.created_at }}
     </p>
+
+    {% if post.made_ai is not None or post.fake_news is not None %}
+      <p>
+        <strong>Score IA :</strong> {{ post.made_ai|default:"N/A" }} / 100 —
+        <strong>Score Fake News :</strong> {{ post.fake_news|default:"N/A" }} / 100
+      </p>
+    {% endif %}
 
   </div>
 {% empty %}
