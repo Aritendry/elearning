@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div id="quiz-container">
+  <form id="quiz-form">
+    <input type="number" id="age" placeholder="Ton âge" required />
+    <input type="text" id="topic" placeholder="Ce que tu veux apprendre" required />
+    <button type="submit">Lancer le quiz</button>
+  </form>
+
+  <div id="question-section" style="display:none;">
+    <h4 id="palier-theme"></h4>
+    <h3 id="question-text"></h3>
+    <div id="choices-container"></div>
+  </div>
+</div>
+
+<script>
+const quizForm = document.getElementById("quiz-form");
+const questionSection = document.getElementById("question-section");
+const questionText = document.getElementById("question-text");
+const choicesContainer = document.getElementById("choices-container");
+const palierTheme = document.getElementById("palier-theme");
+
+let age, topic;
+let currentPalier = 0;
+
+quizForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  age = document.getElementById("age").value;
+  topic = document.getElementById("topic").value;
+
+  quizForm.style.display = "none";
+  await loadPalier(0); // question de préparation
+});
+
+async function loadPalier(palier) {
+  try {
+    const res = await fetch("/quiz/generate/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: new URLSearchParams({ age, topic, palier })
+    });
+
+    const data = await res.json();
+
+    if (palier === 0) {
+      // question d’attente
+      displayQuestion(data, async () => {
+        currentPalier = 1;
+        await loadPalier(currentPalier);
+      });
+    } else {
+      // vrai palier
+      displayPalier(data);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function displayQuestion(q, callback) {
+  questionSection.style.display = "block";
+  questionText.textContent = q.question;
+  palierTheme.textContent = q.theme ? `Thème : ${q.theme}` : `Palier ${q.palier} - Question ${q.level || ""}`;
+  
+  choicesContainer.innerHTML = "";
+  q.choices.forEach((choice, index) => {
+    const btn = document.createElement("button");
+    btn.textContent = choice;
+    btn.classList.add("choice-btn");
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      callback();
+    });
+    choicesContainer.appendChild(btn);
+  });
+}
+
+async function displayPalier(palierData) {
+  let levels = palierData.questions || [];
+  let levelIndex = 0;
+
+  async function nextLevel() {
+    if (levelIndex >= levels.length) {
+      // palier terminé, passer au suivant
+      currentPalier++;
+      await loadPalier(currentPalier);
+      return;
+    }
+    displayQuestion(levels[levelIndex], () => {
+      levelIndex++;
+      nextLevel();
+    });
+  }
+
+  nextLevel();
+}
+</script>
+
+{% endblock %}

@@ -3,12 +3,25 @@ from post.models import Post
 
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
+import json
+from django.http import JsonResponse
+
+from bytez import Bytez
+from django.views.decorators.csrf import csrf_exempt
+
+BYTEZ_KEY = "ed333e5f71baeb5a3f75b54b3db52102"
+sdk = Bytez(BYTEZ_KEY)
+model = sdk.model("Qwen/Qwen3-4B-Instruct-2507")
 
 # Create your views here.
 
 #Creation de la vue pour la pge d'accueil
 def index(request):
     return render(request, 'index.html')
+
+"""
+Appelle l'API Bytez pour obtenir les scores AI et fake news
+"""
 
 def get_ai_fake_score(text):
     prompt = (
@@ -34,6 +47,8 @@ def get_ai_fake_score(text):
         ia_score, fake_score = None, None
 
     return ia_score, fake_score
+
+""" Creation du CRUD post"""
 
 @login_required
 def create_post(request):
@@ -67,7 +82,6 @@ def create_post(request):
 
     return render(request, "post/form_post.html")
    
-
 def all_post(request):
     posts = Post.objects.all().order_by('-created_at')
     return render(request, 'post/all_post.html', context={'posts': posts})
@@ -79,9 +93,108 @@ def detail_post(request, slug):
 def view_api_response(request):
     return render(request, 'post/test_api.html')
 
-from bytez import Bytez
+"""
+QUIZ GENERATOR VIEW
+"""
+PALIER_THEMES = {
+    1: ["Bases du sujet", "Vocabulaire clé", "Concepts simples"],
+    2: ["Concepts intermédiaires", "Exemples pratiques"],
+    3: ["Applications concrètes", "Résolution de problèmes"],
+    4: ["Études de cas", "Expérimentations"],
+    5: ["Approfondissement", "Analyse critique"],
+    6: ["Techniques avancées", "Optimisation"],
+    7: ["Problèmes complexes", "Comparaisons"],
+    8: ["Synthèse", "Interprétation"],
+    9: ["Projets complets", "Intégration multi-concepts"],
+    10:["Expertise avancée", "Défis et exercices complexes"]
+}
 
-BYTEZ_KEY = "ed333e5f71baeb5a3f75b54b3db52102"
-sdk = Bytez(BYTEZ_KEY)
-model = sdk.model("Qwen/Qwen3-4B-Instruct-2507")
+def build_quiz_prompt(age, topic, palier, level):
+    return f"""
+Tu es un générateur de quiz éducatif.
 
+Age: {age}
+Sujet: {topic}
+Palier: {palier}
+Niveau: {level}
+
+Retourne STRICTEMENT ce JSON (rien d'autre) :
+
+{{
+  "question": "...",
+  "choices": ["...", "...", "...", "..."],
+  "answer_index": 0
+}}
+"""
+
+def call_quiz_ai(age, topic, palier, level):
+    prompt = build_quiz_prompt(age, topic, palier, level)
+    response = model.run([{"role": "user", "content": prompt}])
+
+    print("Raw Bytez output:", response)  # log complet
+
+    # Vérification sécurité
+    if response.output is None or response.error:
+        print("Erreur Bytez ou limite atteinte:", response.error)
+        # fallback temporaire
+        return {
+            "question": f"Question {level} du palier {palier} (mock)",
+            "choices": ["A", "B", "C", "D"],
+            "answer_index": 0
+        }
+
+    raw_content = response.output.get("content")
+    print("Content extrait:", raw_content)
+    return json.loads(raw_content)
+
+def build_quiz(age, topic):
+    quiz = {"age": age, "topic": topic, "paliers": []}
+
+    for palier in range(1, 11):
+        palier_data = {"palier": palier, "levels": []}
+
+        for level in range(1, 6):
+            q = call_quiz_ai(age, topic, palier, level)
+            q["level"] = level
+            palier_data["levels"].append(q)
+
+        quiz["paliers"].append(palier_data)
+
+    return quiz
+
+@csrf_exempt
+def generate_quiz(request):
+    palier = int(request.POST.get("palier", 0))  # 0 = question d’attente
+    age = request.POST.get("age")
+    topic = request.POST.get("topic")
+
+    if not age or not topic:
+        return JsonResponse({"error": "age or topic missing"}, status=400)
+
+    if palier == 0:
+        # Question de loading
+        return JsonResponse({
+            "palier": 0,
+            "question": "Prépare-toi, le quiz commence bientôt !",
+            "choices": ["Ok"],
+            "answer_index": 0
+        })
+    else:
+        # génération du palier demandé (1 à 10)
+        questions = []
+        for level in range(1, 6):
+            q = call_quiz_ai(age, topic, palier, level)
+            q["palier"] = palier
+            q["level"] = level
+            # Assurer qu'un thème est défini pour chaque question
+            if "theme" not in q:
+                q["theme"] = f"Thème du palier {palier}"
+            questions.append(q)
+
+        return JsonResponse({
+            "palier": palier,
+            "questions": questions
+        })
+
+def quiz_page(request):
+    return render(request, "post/quiz.html")
