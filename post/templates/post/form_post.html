@@ -1,20 +1,439 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- En-tête -->
+    <div class="mb-8">
+        <div class="flex items-center mb-6">
+            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mr-4">
+                <i class="fas fa-edit text-white text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">
+                    {% if is_edit %}
+                    Modifier l'article
+                    {% else %}
+                    Créer un nouvel article
+                    {% endif %}
+                </h1>
+                <p class="text-gray-600">
+                    {% if is_edit %}
+                    Modifiez votre article existant
+                    {% else %}
+                    Partagez vos connaissances avec la communauté
+                    {% endif %}
+                </p>
+            </div>
+        </div>
 
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
+        <!-- Indicateur AI/Fake News -->
+        <div class="glass-effect rounded-xl p-4 mb-6 border border-primary-200">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-robot text-primary-600 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-gray-900">Analyse automatique</h3>
+                    <div class="mt-1 text-sm text-gray-600">
+                        Votre contenu sera automatiquement analysé pour détecter la probabilité qu'il soit généré par une IA et qu'il contienne des fake news.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <label>Titre</label>
-    <input type="text" name="title" required>
+    <div class="glass-effect rounded-xl p-6 md:p-8">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Titre -->
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-heading text-primary-500 mr-2"></i>
+                        Titre de l'article
+                    </div>
+                </label>
+                <input 
+                    type="text" 
+                    id="title"
+                    name="title" 
+                    required
+                    maxlength="100"
+                    value="{{ post.title|default:'' }}"
+                    placeholder="Donnez un titre clair et descriptif à votre article"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                    oninput="updateCharCount(this, 'title-counter')"
+                >
+                <div class="mt-1 flex justify-between">
+                    <p class="text-xs text-gray-500">Maximum 100 caractères</p>
+                    <span id="title-counter" class="text-xs text-gray-500">{{ post.title|length|default:0 }}/100</span>
+                </div>
+            </div>
 
-    <label>Contenu</label>
-    <textarea name="content" required></textarea>
+            <!-- Contenu -->
+            <div>
+                <label for="content" class="block text-sm font-medium text-gray-700 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-align-left text-primary-500 mr-2"></i>
+                        Contenu de l'article
+                    </div>
+                </label>
+                <textarea 
+                    id="content"
+                    name="content" 
+                    required
+                    rows="10"
+                    maxlength="600"
+                    placeholder="Partagez vos connaissances, réflexions ou questions... (Maximum 600 caractères)"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                    oninput="updateCharCount(this, 'content-counter')"
+                >{{ post.content|default:'' }}</textarea>
+                <div class="mt-1 flex justify-between">
+                    <p class="text-xs text-gray-500">Maximum 600 caractères</p>
+                    <span id="content-counter" class="text-xs text-gray-500">{{ post.content|length|default:0 }}/600</span>
+                </div>
+            </div>
 
-    <label>Fichier (image ou vidéo)</label>
-    <input type="file" name="media">
+            <!-- Média -->
+            <div>
+                <label for="media" class="block text-sm font-medium text-gray-700 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-image text-primary-500 mr-2"></i>
+                        Fichier média (optionnel)
+                    </div>
+                </label>
+                
+                <div class="space-y-4">
+                    <!-- Affichage du fichier existant -->
+                    {% if post and post.media %}
+                    <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-file text-primary-500 mr-3"></i>
+                                <div>
+                                    <p class="font-medium">{{ post.media.name|slice:"6:" }}</p>
+                                    <p class="text-sm text-gray-500">Fichier actuel</p>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <a href="{{ post.media.url }}" target="_blank" class="text-primary-600 hover:text-primary-700 p-2">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <button type="button" onclick="removeExistingFile()" class="text-red-500 hover:text-red-700 p-2">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="keep_media" name="keep_media" value="true">
+                        <p class="text-sm text-gray-600 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Téléverser un nouveau fichier remplacera l'ancien.
+                        </p>
+                    </div>
+                    {% endif %}
 
-    <button type="submit">Publier</button>
-</form>
+                    <!-- Upload area -->
+                    <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors"
+                         onclick="document.getElementById('media').click()">
+                        <input 
+                            type="file" 
+                            id="media"
+                            name="media" 
+                            class="hidden"
+                            accept="image/*,video/*"
+                            onchange="previewFile(this)"
+                        >
+                        
+                        <div class="space-y-3">
+                            <div class="mx-auto w-12 h-12 rounded-full bg-primary-50 flex items-center justify-center">
+                                <i class="fas fa-cloud-upload-alt text-primary-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Cliquez pour téléverser un fichier</p>
+                                <p class="text-xs text-gray-500 mt-1">Images (JPG, PNG) ou vidéos (MP4, WebM)</p>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- Preview area -->
+                    <div id="preview-container" class="hidden">
+                        <div class="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center space-x-3">
+                                <div id="preview-icon" class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                                    <i id="preview-icon-type" class="fas fa-file text-primary-500"></i>
+                                </div>
+                                <div>
+                                    <p id="preview-filename" class="text-sm font-medium text-gray-900"></p>
+                                    <p id="preview-filesize" class="text-xs text-gray-500"></p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="clearFile()" class="text-red-500 hover:text-red-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="media-preview" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tags générés automatiquement -->
+            <div class="glass-effect rounded-lg p-4 border border-gray-200">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-tags text-primary-500 mr-2"></i>
+                    <span class="text-sm font-medium text-gray-700">Tags</span>
+                </div>
+                <p class="text-sm text-gray-600">
+                    Des tags seront automatiquement générés à partir du contenu de votre article pour faciliter sa découverte.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2" id="tag-preview">
+                    <!-- Les tags générés par l'IA apparaîtront ici -->
+                    <div class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-medium rounded-full animate-pulse">
+                        Génération automatique...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations supplémentaires -->
+            <div class="space-y-3">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 mt-1">
+                        <i class="fas fa-info-circle text-primary-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-gray-600">
+                            Après publication, votre article sera analysé par notre IA pour déterminer :
+                        </p>
+                        <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                            <li class="flex items-center">
+                                <i class="fas fa-robot text-xs mr-2"></i>
+                                Probabilité de génération par IA
+                            </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-exclamation-triangle text-xs mr-2"></i>
+                                Risque de fake news
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+                <button type="submit" class="px-6 py-3 rounded-lg btn-primary font-medium flex-1">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    {% if is_edit %}
+                    Mettre à jour l'article
+                    {% else %}
+                    Publier l'article
+                    {% endif %}
+                </button>
+                <a href="{% if is_edit %}{% url 'user_profile' user.username %}{% else %}{% url 'all_post' %}{% endif %}" 
+                   class="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium text-center transition-colors">
+                    <i class="fas fa-times mr-2"></i>Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Compteur de caractères
+function updateCharCount(element, counterId) {
+    const counter = document.getElementById(counterId);
+    if (counter) {
+        const maxLength = parseInt(element.getAttribute('maxlength'));
+        const currentLength = element.value.length;
+        counter.textContent = `${currentLength}/${maxLength}`;
+        
+        if (currentLength > maxLength * 0.9) {
+            counter.classList.add('text-red-500');
+        } else {
+            counter.classList.remove('text-red-500');
+        }
+    }
+}
+
+// Prévisualisation du fichier
+function previewFile(input) {
+    const previewContainer = document.getElementById('preview-container');
+    const previewIcon = document.getElementById('preview-icon-type');
+    const previewFilename = document.getElementById('preview-filename');
+    const previewFilesize = document.getElementById('preview-filesize');
+    const mediaPreview = document.getElementById('media-preview');
+    const file = input.files[0];
+
+    if (file) {
+        previewContainer.classList.remove('hidden');
+        
+        // Nom et taille du fichier
+        previewFilename.textContent = file.name;
+        previewFilesize.textContent = formatFileSize(file.size);
+        
+        // Déterminer le type de fichier
+        if (file.type.startsWith('image/')) {
+            previewIcon.className = 'fas fa-image text-primary-500';
+            document.getElementById('preview-icon').classList.add('bg-primary-100');
+            
+            // Prévisualisation d'image
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                mediaPreview.innerHTML = `
+                    <div class="rounded-lg overflow-hidden border border-gray-200">
+                        <img src="${e.target.result}" alt="Preview" class="w-full h-48 object-cover">
+                    </div>
+                `;
+            };
+            reader.readAsDataURL(file);
+            
+        } else if (file.type.startsWith('video/')) {
+            previewIcon.className = 'fas fa-video text-primary-500';
+            document.getElementById('preview-icon').classList.add('bg-primary-100');
+            
+            // Prévisualisation de vidéo
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                mediaPreview.innerHTML = `
+                    <div class="rounded-lg overflow-hidden border border-gray-200">
+                        <video controls class="w-full h-48 object-cover">
+                            <source src="${e.target.result}" type="${file.type}">
+                            Votre navigateur ne supporte pas la lecture de vidéos.
+                        </video>
+                    </div>
+                `;
+            };
+            reader.readAsDataURL(file);
+            
+        } else {
+            previewIcon.className = 'fas fa-file text-primary-500';
+            document.getElementById('preview-icon').classList.add('bg-primary-100');
+            mediaPreview.innerHTML = '';
+        }
+        
+        // Si on a un fichier existant, on marque qu'on le remplace
+        if (document.getElementById('keep_media')) {
+            document.getElementById('keep_media').value = 'false';
+        }
+    }
+}
+
+// Effacer le fichier sélectionné
+function clearFile() {
+    const fileInput = document.getElementById('media');
+    const previewContainer = document.getElementById('preview-container');
+    const mediaPreview = document.getElementById('media-preview');
+    
+    fileInput.value = '';
+    previewContainer.classList.add('hidden');
+    mediaPreview.innerHTML = '';
+    
+    // Si on avait un fichier existant, on garde l'ancien
+    if (document.getElementById('keep_media')) {
+        document.getElementById('keep_media').value = 'true';
+    }
+}
+
+// Supprimer le fichier existant
+function removeExistingFile() {
+    if (confirm("Voulez-vous vraiment supprimer le fichier média existant ?")) {
+        const mediaContainer = document.querySelector('.mb-4.p-4.bg-gray-50.rounded-lg');
+        if (mediaContainer) {
+            mediaContainer.remove();
+            
+            // Créer un champ caché pour indiquer la suppression
+            let deleteInput = document.getElementById('delete_media');
+            if (!deleteInput) {
+                deleteInput = document.createElement('input');
+                deleteInput.type = 'hidden';
+                deleteInput.id = 'delete_media';
+                deleteInput.name = 'delete_media';
+                deleteInput.value = 'true';
+                document.querySelector('form').appendChild(deleteInput);
+            }
+            
+            // Si on a le champ keep_media, le mettre à false
+            if (document.getElementById('keep_media')) {
+                document.getElementById('keep_media').value = 'false';
+            }
+        }
+    }
+}
+
+// Formater la taille du fichier
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Simulation de tags IA (pour l'instant statique, à remplacer par l'appel réel à l'IA)
+function simulateTags(content) {
+    const tagPreview = document.getElementById('tag-preview');
+    if (content.length > 50) {
+        // Ceci est une simulation. En réalité, ces tags viendraient de l'IA.
+        const mockTags = ['Éducation', 'Technologie', 'Afrique', 'IA', 'Apprentissage'];
+        tagPreview.innerHTML = '';
+        mockTags.forEach(tag => {
+            tagPreview.innerHTML += `
+                <span class="px-3 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
+                    ${tag}
+                </span>
+            `;
+        });
+    }
+}
+
+// Écouter les changements dans le champ de contenu pour générer des tags
+document.getElementById('content').addEventListener('input', function(e) {
+    simulateTags(e.target.value);
+});
+
+// Initialiser les compteurs
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('title');
+    const contentInput = document.getElementById('content');
+    
+    updateCharCount(titleInput, 'title-counter');
+    updateCharCount(contentInput, 'content-counter');
+    
+    // Simuler des tags initiaux
+    simulateTags(contentInput.value);
+    
+    // Si on est en mode édition et qu'il y a déjà du contenu, générer des tags
+    {% if is_edit and post.content %}
+    simulateTags('{{ post.content|escapejs }}');
+    {% endif %}
+});
+</script>
+
+<style>
+/* Animation pour le bouton de téléversement */
+input[type="file"] {
+    cursor: pointer;
+}
+
+/* Amélioration du textarea */
+textarea {
+    resize: vertical;
+    min-height: 150px;
+}
+
+/* Style pour le champ de fichier au survol */
+input[type="file"]:hover + label {
+    border-color: #0ea5e9;
+    background-color: #f0f9ff;
+}
+
+/* Animation pour les tags */
+@keyframes tagPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+    animation: tagPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>
 {% endblock %}

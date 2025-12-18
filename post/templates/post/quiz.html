@@ -1,314 +1,542 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
-<div id="quiz-container">
-  <form id="quiz-form">
-    <input type="number" id="age" placeholder="Ton âge" required min="5" max="120" />
-    <input type="text" id="topic" placeholder="Ce que tu veux apprendre" required />
-    <button type="submit">Lancer le quiz</button>
-  </form>
-
-  <div id="question-section" style="display:none;">
-    <h4 id="palier-theme"></h4>
-    <h3 id="question-text"></h3>
-    <div id="choices-container"></div>
-    <div id="explanation-container" style="display:none; margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
-      <p><strong>Explication :</strong> <span id="explanation-text"></span></p>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- En-tête -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 mb-4">
+            <i class="fas fa-brain text-white text-2xl"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Quiz Intelligent</h1>
+        <p class="text-gray-600 max-w-2xl mx-auto">
+            Testez vos connaissances avec notre quiz adaptatif. L'IA génère des questions personnalisées selon votre âge et votre sujet d'intérêt.
+        </p>
     </div>
-    <button id="next-button" style="display:none; margin-top: 15px;">Question suivante →</button>
-    <div id="loading" style="display:none; text-align: center; margin: 20px;">
-      <p>Chargement du prochain palier...</p>
-      <div class="spinner"></div>
+
+    <!-- Formulaire de démarrage -->
+    <div id="quiz-form-container" class="glass-effect rounded-xl p-6 md:p-8 mb-8">
+        <form id="quiz-form" class="space-y-6">
+            <div class="space-y-4">
+                <!-- Âge -->
+                <div>
+                    <label for="age" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user-graduate text-primary-500 mr-2"></i>
+                        Votre âge
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="number" 
+                            id="age" 
+                            min="5" 
+                            max="120" 
+                            required
+                            placeholder="Entrez votre âge"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                        >
+                        <div class="absolute right-3 top-3 text-gray-400">
+                            ans
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Entre 5 et 120 ans</p>
+                </div>
+
+                <!-- Sujet -->
+                <div>
+                    <label for="topic" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-book-open text-primary-500 mr-2"></i>
+                        Sujet d'apprentissage
+                    </label>
+                    <input 
+                        type="text" 
+                        id="topic" 
+                        required
+                        placeholder="Ex: Intelligence Artificielle, Histoire Africaine, Mathématiques..."
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">Le sujet que vous souhaitez approfondir</p>
+                </div>
+            </div>
+
+            <!-- Bouton de démarrage -->
+            <button type="submit" class="w-full py-3 rounded-lg btn-primary font-medium text-lg">
+                <i class="fas fa-play mr-2"></i>Démarrer le quiz
+            </button>
+        </form>
     </div>
-  </div>
+
+    <!-- Section des questions (cachée au début) -->
+    <div id="question-section" class="hidden">
+        <!-- En-tête du quiz -->
+        <div class="glass-effect rounded-xl p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div id="palier-theme" class="text-sm font-medium text-gray-600 mb-1"></div>
+                    <h2 id="question-text" class="text-xl font-bold text-gray-900"></h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="px-4 py-2 rounded-lg bg-primary-50 border border-primary-200">
+                        <div class="text-xs text-primary-700">Score</div>
+                        <div id="current-score" class="text-lg font-bold text-primary-600">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteneur des choix -->
+        <div id="choices-container" class="space-y-3 mb-6"></div>
+
+        <!-- Explication -->
+        <div id="explanation-container" class="glass-effect rounded-xl p-5 mb-6 border border-primary-200 hidden">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 mt-0.5">
+                    <i class="fas fa-lightbulb text-primary-500 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h4 class="text-sm font-medium text-gray-900 mb-1">Explication</h4>
+                    <p id="explanation-text" class="text-gray-600"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bouton suivant -->
+        <button id="next-button" class="w-full py-3 rounded-lg btn-primary font-medium hidden">
+            <span id="next-button-text">Question suivante</span>
+            <i class="fas fa-arrow-right ml-2"></i>
+        </button>
+
+        <!-- Indicateur de chargement -->
+        <div id="loading" class="text-center p-8 hidden">
+            <div class="inline-block w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-600">Génération des questions en cours...</p>
+            <p class="text-sm text-gray-500 mt-2">L'IA prépare votre quiz personnalisé</p>
+        </div>
+
+        <!-- Progression -->
+        <div class="mt-8">
+            <div class="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Progression</span>
+                <span id="progress-text">Question 0/0</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="progress-bar" class="bg-gradient-to-r from-primary-500 to-accent-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section résultat (cachée) -->
+    <div id="result-section" class="hidden glass-effect rounded-xl p-8 text-center">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 mb-6">
+            <i class="fas fa-trophy text-white text-3xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Quiz Terminé !</h2>
+        <p id="result-message" class="text-gray-600 mb-6"></p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="glass-effect rounded-lg p-4">
+                <div class="text-2xl font-bold text-primary-600" id="final-score">0</div>
+                <div class="text-sm text-gray-600">Score</div>
+            </div>
+            <div class="glass-effect rounded-lg p-4">
+                <div class="text-2xl font-bold text-accent-600" id="total-questions">0</div>
+                <div class="text-sm text-gray-600">Questions</div>
+            </div>
+            <div class="glass-effect rounded-lg p-4">
+                <div class="text-2xl font-bold text-secondary-600" id="palier-number">0</div>
+                <div class="text-sm text-gray-600">Palier</div>
+            </div>
+        </div>
+        <button onclick="restartQuiz()" class="px-6 py-3 rounded-lg btn-primary font-medium">
+            <i class="fas fa-redo mr-2"></i>Recommencer un quiz
+        </button>
+    </div>
+
+    <!-- Informations sur le quiz -->
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="glass-effect rounded-xl p-5">
+            <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+                <i class="fas fa-robot text-primary-600"></i>
+            </div>
+            <h3 class="font-medium text-gray-900 mb-2">Génération IA</h3>
+            <p class="text-sm text-gray-600">Les questions sont générées en temps réel par intelligence artificielle.</p>
+        </div>
+        <div class="glass-effect rounded-xl p-5">
+            <div class="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center mb-4">
+                <i class="fas fa-chart-line text-accent-600"></i>
+            </div>
+            <h3 class="font-medium text-gray-900 mb-2">Adaptatif</h3>
+            <p class="text-sm text-gray-600">La difficulté s'adapte à votre niveau et à vos réponses.</p>
+        </div>
+        <div class="glass-effect rounded-xl p-5">
+            <div class="w-12 h-12 rounded-full bg-secondary-100 flex items-center justify-center mb-4">
+                <i class="fas fa-graduation-cap text-secondary-600"></i>
+            </div>
+            <h3 class="font-medium text-gray-900 mb-2">Pédagogique</h3>
+            <p class="text-sm text-gray-600">Chaque réponse est accompagnée d'une explication détaillée.</p>
+        </div>
+    </div>
 </div>
-
-<style>
-.spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 10px auto;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.choice-btn {
-  display: block;
-  width: 100%;
-  margin: 8px 0;
-  padding: 12px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.choice-btn:hover {
-  background: #f8f9fa;
-  border-color: #007bff;
-}
-
-.choice-btn.correct {
-  background: #d4edda;
-  border-color: #28a745;
-}
-
-.choice-btn.incorrect {
-  background: #f8d7da;
-  border-color: #dc3545;
-}
-
-#next-button {
-  padding: 10px 20px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-#next-button:hover {
-  background: #0056b3;
-}
-</style>
 
 <script>
 const quizForm = document.getElementById("quiz-form");
+const quizFormContainer = document.getElementById("quiz-form-container");
 const questionSection = document.getElementById("question-section");
 const questionText = document.getElementById("question-text");
-const choicesContainer = document.getElementById("choices-container");
 const palierTheme = document.getElementById("palier-theme");
+const choicesContainer = document.getElementById("choices-container");
 const explanationContainer = document.getElementById("explanation-container");
 const explanationText = document.getElementById("explanation-text");
 const nextButton = document.getElementById("next-button");
+const nextButtonText = document.getElementById("next-button-text");
 const loadingDiv = document.getElementById("loading");
+const resultSection = document.getElementById("result-section");
+const progressBar = document.getElementById("progress-bar");
+const progressText = document.getElementById("progress-text");
+const currentScoreElement = document.getElementById("current-score");
+const finalScoreElement = document.getElementById("final-score");
+const totalQuestionsElement = document.getElementById("total-questions");
+const palierNumberElement = document.getElementById("palier-number");
+const resultMessage = document.getElementById("result-message");
 
 let age, topic;
 let currentPalier = 0;
-let currentQuestions = []; // Stocke les 5 questions du palier courant
+let currentQuestions = [];
 let currentQuestionIndex = 0;
 let userScore = 0;
+let totalQuestionsAnswered = 0;
 
 // Validation du formulaire
 quizForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  age = parseInt(document.getElementById("age").value);
-  topic = document.getElementById("topic").value.trim();
-  
-  if (!age || age < 5 || age > 120) {
-    alert("Veuillez entrer un âge valide (entre 5 et 120 ans)");
-    return;
-  }
-  
-  if (!topic || topic.length < 2) {
-    alert("Veuillez entrer un sujet valide (au moins 2 caractères)");
-    return;
-  }
-  
-  quizForm.style.display = "none";
-  questionSection.style.display = "block";
-  await loadPalier(0); // Question de préparation
+    e.preventDefault();
+    age = parseInt(document.getElementById("age").value);
+    topic = document.getElementById("topic").value.trim();
+    
+    if (!age || age < 5 || age > 120) {
+        showToast("Veuillez entrer un âge valide (entre 5 et 120 ans)", "error");
+        return;
+    }
+    
+    if (!topic || topic.length < 2) {
+        showToast("Veuillez entrer un sujet valide (au moins 2 caractères)", "error");
+        return;
+    }
+    
+    // Animation de transition
+    quizFormContainer.classList.add("opacity-0", "transition-opacity", "duration-300");
+    setTimeout(() => {
+        quizFormContainer.classList.add("hidden");
+        questionSection.classList.remove("hidden");
+        questionSection.classList.add("animate-fade-in");
+        loadPalier(0);
+    }, 300);
 });
 
 async function loadPalier(palier) {
-  try {
-    // Afficher le loading pour les paliers > 0
-    if (palier > 0) {
-      showLoading();
-    }
-    
-    const res = await fetch("/quiz/generate/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-CSRFToken": "{{ csrf_token }}"
-      },
-      body: new URLSearchParams({ age, topic, palier })
-    });
+    try {
+        if (palier > 0) {
+            showLoading();
+        }
+        
+        const res = await fetch("/quiz/generate/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-CSRFToken": getCsrfToken()
+            },
+            body: new URLSearchParams({ age, topic, palier })
+        });
 
-    if (!res.ok) {
-      throw new Error(`Erreur HTTP: ${res.status}`);
-    }
-    
-    const data = await res.json();
-    
-    // Cacher le loading
-    hideLoading();
+        if (!res.ok) {
+            throw new Error(`Erreur HTTP: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        hideLoading();
 
-    if (palier === 0) {
-      // Question d'attente
-      displayWelcomeMessage(data, () => {
-        currentPalier = 1;
-        loadPalier(currentPalier);
-      });
-    } else {
-      // Stocker toutes les questions du palier
-      currentQuestions = data.questions || [];
-      currentQuestionIndex = 0;
-      userScore = 0; // Réinitialiser le score pour le nouveau palier
-      
-      if (currentQuestions.length === 0) {
-        showError("Aucune question n'a été générée pour ce palier.");
-        return;
-      }
-      
-      // Afficher la première question
-      displayQuestion(currentQuestions[0]);
+        if (palier === 0) {
+            // Question de bienvenue
+            displayWelcomeMessage(data);
+        } else {
+            currentQuestions = data.questions || [];
+            currentQuestionIndex = 0;
+            userScore = 0;
+            totalQuestionsAnswered = 0;
+            currentScoreElement.textContent = "0";
+            
+            if (currentQuestions.length === 0) {
+                showError("Aucune question n'a été générée pour ce palier.");
+                return;
+            }
+            
+            updateProgress();
+            displayQuestion(currentQuestions[0]);
+        }
+    } catch (err) {
+        console.error(err);
+        hideLoading();
+        showError("Erreur de chargement du quiz. Veuillez réessayer.");
     }
-  } catch (err) {
-    console.error(err);
-    hideLoading();
-    showError("Erreur de chargement du quiz. Veuillez réessayer.");
-  }
 }
 
 function showLoading() {
-  questionText.textContent = "";
-  choicesContainer.innerHTML = "";
-  explanationContainer.style.display = "none";
-  nextButton.style.display = "none";
-  loadingDiv.style.display = "block";
+    questionText.textContent = "";
+    palierTheme.textContent = "";
+    choicesContainer.innerHTML = "";
+    explanationContainer.classList.add("hidden");
+    nextButton.classList.add("hidden");
+    loadingDiv.classList.remove("hidden");
 }
 
 function hideLoading() {
-  loadingDiv.style.display = "none";
+    loadingDiv.classList.add("hidden");
 }
 
 function showError(message) {
-  questionText.textContent = "Erreur";
-  choicesContainer.innerHTML = `<p style="color: red;">${message}</p>`;
-  palierTheme.textContent = "Problème technique";
-  nextButton.style.display = "block";
-  nextButton.textContent = "Réessayer";
-  nextButton.onclick = () => loadPalier(currentPalier);
+    questionText.textContent = "Erreur";
+    palierTheme.textContent = "Problème technique";
+    choicesContainer.innerHTML = `
+        <div class="glass-effect rounded-xl p-6 border border-red-200 bg-red-50">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+                <p class="text-red-700">${message}</p>
+            </div>
+        </div>
+    `;
+    nextButton.classList.remove("hidden");
+    nextButtonText.textContent = "Réessayer";
+    nextButton.onclick = () => loadPalier(currentPalier);
 }
 
-function displayWelcomeMessage(data, callback) {
-  questionSection.style.display = "block";
-  questionText.textContent = data.question || "Bienvenue au quiz !";
-  palierTheme.textContent = "Préparation...";
-  choicesContainer.innerHTML = "";
-  
-  // Créer un bouton pour commencer
-  const startBtn = document.createElement("button");
-  startBtn.textContent = data.choices && data.choices[0] ? data.choices[0] : "Commencer le quiz";
-  startBtn.classList.add("choice-btn");
-  startBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    callback();
-  });
-  choicesContainer.appendChild(startBtn);
-  
-  explanationContainer.style.display = "none";
-  nextButton.style.display = "none";
+function displayWelcomeMessage(data) {
+    questionText.textContent = data.question || "Préparez-vous pour le quiz !";
+    palierTheme.textContent = "Bienvenue";
+    
+    choicesContainer.innerHTML = `
+        <div class="text-center py-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary-100 to-accent-100 mb-4">
+                <i class="fas fa-play text-primary-600 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-3">Quiz sur : ${topic}</h3>
+            <p class="text-gray-600 mb-6">L'IA va générer des questions adaptées à votre niveau.</p>
+            <button id="start-quiz-btn" class="px-6 py-3 rounded-lg btn-primary font-medium">
+                <i class="fas fa-rocket mr-2"></i>Commencer maintenant
+            </button>
+        </div>
+    `;
+    
+    document.getElementById("start-quiz-btn").addEventListener("click", () => {
+        currentPalier = 1;
+        loadPalier(currentPalier);
+    });
+    
+    explanationContainer.classList.add("hidden");
+    nextButton.classList.add("hidden");
 }
 
 function displayQuestion(question) {
-  questionSection.style.display = "block";
-  questionText.textContent = question.question;
-  
-  // Afficher les informations du palier/niveau
-  const level = question.level || currentQuestionIndex + 1;
-  const theme = question.theme || `Palier ${currentPalier}`;
-  palierTheme.textContent = `Palier ${currentPalier} - Question ${level} | ${theme}`;
-  
-  // Afficher les choix
-  choicesContainer.innerHTML = "";
-  if (question.choices && Array.isArray(question.choices)) {
-    question.choices.forEach((choice, index) => {
-      const btn = document.createElement("button");
-      btn.textContent = choice;
-      btn.classList.add("choice-btn");
-      btn.dataset.index = index;
-      
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        handleAnswerSelection(question, index);
-      });
-      
-      choicesContainer.appendChild(btn);
-    });
-  }
-  
-  // Cacher l'explication et le bouton suivant
-  explanationContainer.style.display = "none";
-  nextButton.style.display = "none";
+    questionText.textContent = question.question;
+    
+    const level = question.level || currentQuestionIndex + 1;
+    const theme = question.theme || `Palier ${currentPalier}`;
+    palierTheme.textContent = `${theme} • Question ${level}`;
+    
+    // Afficher les choix
+    choicesContainer.innerHTML = "";
+    if (question.choices && Array.isArray(question.choices)) {
+        question.choices.forEach((choice, index) => {
+            const choiceElement = document.createElement("button");
+            choiceElement.className = "w-full text-left p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors duration-200";
+            choiceElement.innerHTML = `
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center mr-3">
+                        ${String.fromCharCode(65 + index)}
+                    </div>
+                    <div class="flex-1">${choice}</div>
+                </div>
+            `;
+            choiceElement.dataset.index = index;
+            choiceElement.addEventListener("click", (e) => {
+                e.preventDefault();
+                handleAnswerSelection(question, index);
+            });
+            choicesContainer.appendChild(choiceElement);
+        });
+    }
+    
+    explanationContainer.classList.add("hidden");
+    nextButton.classList.add("hidden");
 }
 
 function handleAnswerSelection(question, selectedIndex) {
-  const correctIndex = question.answer_index || 0;
-  const buttons = document.querySelectorAll('.choice-btn');
-  
-  // Désactiver tous les boutons
-  buttons.forEach(btn => {
-    btn.disabled = true;
-    btn.style.cursor = "not-allowed";
-  });
-  
-  // Marquer la bonne réponse
-  buttons[correctIndex].classList.add("correct");
-  
-  // Si mauvaise réponse, marquer celle choisie
-  if (selectedIndex !== correctIndex) {
-    buttons[selectedIndex].classList.add("incorrect");
-  } else {
-    userScore++; // Incrémenter le score si bonne réponse
-  }
-  
-  // Afficher l'explication si disponible
-  if (question.explanation) {
-    explanationText.textContent = question.explanation;
-    explanationContainer.style.display = "block";
-  }
-  
-  // Afficher le bouton suivant
-  nextButton.style.display = "block";
-  nextButton.textContent = currentQuestionIndex < currentQuestions.length - 1 
-    ? "Question suivante →" 
-    : `Palier suivant (Score: ${userScore}/${currentQuestions.length})`;
-  
-  nextButton.onclick = () => {
-    if (currentQuestionIndex < currentQuestions.length - 1) {
-      // Passer à la question suivante
-      currentQuestionIndex++;
-      displayQuestion(currentQuestions[currentQuestionIndex]);
-    } else {
-      // Palier terminé, passer au suivant
-      if (currentPalier < 10) {
-        currentPalier++;
-        loadPalier(currentPalier);
-      } else {
-        // Quiz terminé
-        showQuizCompleted();
-      }
+    const correctIndex = question.answer_index || 0;
+    const buttons = choicesContainer.querySelectorAll("button");
+    
+    // Désactiver tous les boutons
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove("hover:border-primary-300", "hover:bg-primary-50");
+        btn.classList.add("cursor-not-allowed");
+    });
+    
+    // Marquer la réponse sélectionnée et la bonne réponse
+    buttons.forEach((btn, index) => {
+        if (index === correctIndex) {
+            btn.classList.add("bg-green-50", "border-green-200");
+            btn.querySelector("div:first-child").classList.add("text-green-600");
+        }
+        if (index === selectedIndex) {
+            if (index !== correctIndex) {
+                btn.classList.add("bg-red-50", "border-red-200");
+                btn.querySelector("div:first-child").classList.add("text-red-600");
+            } else {
+                userScore++;
+                currentScoreElement.textContent = userScore;
+            }
+        }
+    });
+    
+    // Afficher l'explication
+    if (question.explanation) {
+        explanationText.textContent = question.explanation;
+        explanationContainer.classList.remove("hidden");
     }
-  };
+    
+    // Mettre à jour la progression
+    totalQuestionsAnswered++;
+    updateProgress();
+    
+    // Afficher le bouton suivant
+    nextButton.classList.remove("hidden");
+    nextButtonText.textContent = currentQuestionIndex < currentQuestions.length - 1 
+        ? "Question suivante" 
+        : `Palier suivant (Score: ${userScore}/${currentQuestions.length})`;
+    
+    nextButton.onclick = () => {
+        if (currentQuestionIndex < currentQuestions.length - 1) {
+            currentQuestionIndex++;
+            displayQuestion(currentQuestions[currentQuestionIndex]);
+        } else {
+            if (currentPalier < 10) {
+                currentPalier++;
+                loadPalier(currentPalier);
+            } else {
+                showQuizCompleted();
+            }
+        }
+    };
+}
+
+function updateProgress() {
+    const progress = totalQuestionsAnswered / currentQuestions.length * 100;
+    progressBar.style.width = `${progress}%`;
+    progressText.textContent = `Question ${totalQuestionsAnswered}/${currentQuestions.length}`;
 }
 
 function showQuizCompleted() {
-  questionText.textContent = "🎉 Quiz Terminé !";
-  palierTheme.textContent = "Félicitations !";
-  choicesContainer.innerHTML = `
-    <p>Tu as complété tous les paliers !</p>
-    <p>Score final du dernier palier : ${userScore}/${currentQuestions.length}</p>
-    <p>Tu peux recommencer avec un autre sujet.</p>
-  `;
-  explanationContainer.style.display = "none";
-  nextButton.style.display = "block";
-  nextButton.textContent = "Recommencer un quiz";
-  nextButton.onclick = () => {
-    location.reload(); // Recharger la page pour recommencer
-  };
+    questionSection.classList.add("hidden");
+    resultSection.classList.remove("hidden");
+    resultSection.classList.add("animate-fade-in");
+    
+    const percentage = Math.round((userScore / currentQuestions.length) * 100);
+    finalScoreElement.textContent = userScore;
+    totalQuestionsElement.textContent = currentQuestions.length;
+    palierNumberElement.textContent = currentPalier;
+    
+    let message = "";
+    if (percentage >= 80) {
+        message = "Excellent ! Vous maîtrisez parfaitement ce sujet.";
+    } else if (percentage >= 60) {
+        message = "Très bon résultat ! Vous avez une bonne compréhension du sujet.";
+    } else if (percentage >= 40) {
+        message = "Bien joué ! Vous avez des bases solides à approfondir.";
+    } else {
+        message = "Continue d'apprendre ! Chaque quiz est une opportunité de progresser.";
+    }
+    
+    resultMessage.textContent = message;
 }
+
+function restartQuiz() {
+    resultSection.classList.add("hidden");
+    quizFormContainer.classList.remove("hidden", "opacity-0");
+    setTimeout(() => {
+        quizFormContainer.classList.remove("opacity-0");
+    }, 50);
+    
+    // Réinitialiser le formulaire
+    document.getElementById("age").value = "";
+    document.getElementById("topic").value = "";
+    currentPalier = 0;
+    currentQuestions = [];
+    currentQuestionIndex = 0;
+    userScore = 0;
+    totalQuestionsAnswered = 0;
+}
+
+// Fonction pour récupérer le token CSRF
+function getCsrfToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return cookieValue || '';
+}
+
+// Initialiser les animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Ajouter des classes d'animation
+    const elements = document.querySelectorAll('.glass-effect');
+    elements.forEach((element, index) => {
+        element.style.animationDelay = `${index * 100}ms`;
+    });
+});
 </script>
 
+<style>
+/* Animations supplémentaires */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Styles pour les choix de réponse */
+.choice-selected {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
+/* Animation pour le score */
+@keyframes scoreIncrement {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.score-animation {
+    animation: scoreIncrement 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .glass-effect {
+        padding: 1.25rem !important;
+    }
+    
+    h1 {
+        font-size: 1.75rem !important;
+    }
+    
+    h2 {
+        font-size: 1.25rem !important;
+    }
+}
+</style>
 {% endblock %}

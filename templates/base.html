@@ -1,27 +1,606 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>elearning</title>
+    <title>IA Éducative - Afrique</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configuration palette africaine moderne -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        secondary: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            200: '#fef08a',
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                            800: '#854d0e',
+                            900: '#713f12',
+                        },
+                        accent: {
+                            50: '#fdf2f8',
+                            100: '#fce7f3',
+                            200: '#fbcfe8',
+                            300: '#f9a8d4',
+                            400: '#f472b6',
+                            500: '#ec4899',
+                            600: '#db2777',
+                            700: '#be185d',
+                            800: '#9d174d',
+                            900: '#831843',
+                        },
+                        africa: {
+                            sun: '#e97451',
+                            earth: '#a0522d',
+                            sky: '#89cff0',
+                            green: '#228b22',
+                            gold: '#daa520',
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        'display': ['Poppins', 'Georgia', 'serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Styles personnalisés */
+        :root {
+            --color-primary: #0ea5e9;
+            --color-secondary: #eab308;
+            --color-accent: #ec4899;
+            --color-africa-sun: #e97451;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #1f2937;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+        
+        .glass-morphism-africa {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(233, 116, 81, 0.15);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .africa-pattern {
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(233, 116, 81, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.05) 0%, transparent 50%);
+        }
+        
+        .navigation-link {
+            position: relative;
+            padding-bottom: 4px;
+        }
+        
+        .navigation-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--color-primary);
+            transition: width 0.3s ease;
+        }
+        
+        .navigation-link:hover::after {
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--color-primary), #0284c7);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(90deg, var(--color-secondary), #ca8a04);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(234, 179, 8, 0.3);
+        }
+        
+        .floating-element {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pattern-dots {
+            background-image: radial-gradient(rgba(14, 165, 233, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .shadow-africa {
+            box-shadow: 0 4px 20px rgba(233, 116, 81, 0.2);
+        }
+    </style>
 </head>
-<body>
-<nav>
-    {% if user.is_authenticated %}
-        <span>Connecté en tant que : {{ user.username }}</span>
-        <a href="{% url 'create_post' %}">Créer un post</a>
-        <a href="{% url 'all_post' %}">Voir tous les posts</a>
-        <a href="{% url 'test_api' %}">Test API</a>
-        <a href="{% url 'quiz_page' %}">Quiz</a>
-        <a href="{% url 'logout_user' %}">Se déconnecter</a>
-    {% else %}
-        <a href="{% url 'user_login' %}">Se connecter</a>
-        <a href="{% url 'register_user' %}">S'inscrire</a>
-    {% endif %}
-</nav>
+<body class="africa-pattern">
+    <!-- Navigation -->
+    <nav class="glass-effect sticky top-0 z-50 border-b border-gray-100">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center">
+                        <i class="fas fa-brain text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold gradient-text">IA Éducative</span>
+                        <span class="text-xs text-gray-500 block -mt-1">Afrique</span>
+                    </div>
+                </div>
+                
+                <!-- Navigation Links (Desktop) -->
+                <div class="hidden md:flex items-center space-x-8">
+                    {% if user.is_authenticated %}
+                    <div class="flex items-center space-x-6">
+                        <a href="{% url 'all_post' %}" class="navigation-link text-gray-700 hover:text-primary-600 font-medium">
+                            <i class="fas fa-newspaper mr-2"></i>Posts
+                        </a>
+                        <a href="{% url 'create_post' %}" class="navigation-link text-gray-700 hover:text-primary-600 font-medium">
+                            <i class="fas fa-edit mr-2"></i>Créer
+                        </a>
+                        <a href="{% url 'quiz_page' %}" class="navigation-link text-gray-700 hover:text-primary-600 font-medium">
+                            <i class="fas fa-graduation-cap mr-2"></i>Quiz
+                        </a>
+                        
+                        <!-- Menu utilisateur déroulant -->
+                        <div class="relative group">
+                            <button class="flex items-center space-x-3 px-4 py-2 rounded-full glass-morphism-africa hover:shadow-africa transition-all duration-300">
+                                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-africa-sun to-africa-gold flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-sm"></i>
+                                </div>
+                                <div class="text-left hidden lg:block">
+                                    <div class="text-sm font-bold text-gray-800">{{ user.username|truncatechars:12 }}</div>
+                                    <div class="text-xs text-gray-600">Étudiant Connecté</div>
+                                </div>
+                                <i class="fas fa-chevron-down text-gray-600 text-xs"></i>
+                            </button>
+                            
+                            <div class="absolute right-0 mt-2 w-48 bg-white/90 backdrop-blur-xl border border-gray-200 rounded-2xl py-2 hidden group-hover:block z-10 shadow-xl">
+                                <a href="{% url 'user_profile' user.username %}" class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100/50 transition-colors duration-200">
+                                    <i class="fas fa-user mr-3"></i>
+                                    <span>Mon Profil</span>
+                                </a>
+                                <div class="border-t border-gray-200 my-2"></div>
+                                <a href="{% url 'all_post' %}" class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100/50 transition-colors duration-200">
+                                    <i class="fas fa-newspaper mr-3"></i>
+                                    <span>Posts</span>
+                                </a>
+                                <a href="{% url 'create_post' %}" class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100/50 transition-colors duration-200">
+                                    <i class="fas fa-edit mr-3"></i>
+                                    <span>Créer</span>
+                                </a>
+                                <a href="{% url 'quiz_page' %}" class="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100/50 transition-colors duration-200">
+                                    <i class="fas fa-graduation-cap mr-3"></i>
+                                    <span>Quiz</span>
+                                </a>
+                                <div class="border-t border-gray-200 my-2"></div>
+                                <a href="{% url 'logout_user' %}" class="flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50/50 transition-colors duration-200">
+                                    <i class="fas fa-sign-out-alt mr-3"></i>
+                                    <span>Déconnexion</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="flex items-center space-x-4">
+                        <a href="{% url 'user_login' %}" class="px-4 py-2 rounded-lg border border-primary-600 text-primary-600 hover:bg-primary-50 font-medium transition-colors">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Connexion
+                        </a>
+                        <a href="{% url 'register_user' %}" class="px-4 py-2 rounded-lg btn-primary font-medium">
+                            <i class="fas fa-user-plus mr-2"></i>Inscription
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="md:hidden hidden border-t border-gray-100 bg-white">
+            <div class="px-4 py-3 space-y-3">
+                {% if user.is_authenticated %}
+                <div class="px-3 py-2 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-africa-sun to-africa-gold flex items-center justify-center mr-3">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium">{{ user.username }}</p>
+                            <p class="text-xs text-gray-500">Étudiant Connecté</p>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'user_profile' user.username %}" class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-user text-gray-500 mr-3 w-5"></i>
+                    <span>Mon Profil</span>
+                </a>
+                <a href="{% url 'all_post' %}" class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-newspaper text-gray-500 mr-3 w-5"></i>
+                    <span>Voir tous les posts</span>
+                </a>
+                <a href="{% url 'create_post' %}" class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-edit text-gray-500 mr-3 w-5"></i>
+                    <span>Créer un post</span>
+                </a>
+                <a href="{% url 'quiz_page' %}" class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-graduation-cap text-gray-500 mr-3 w-5"></i>
+                    <span>Quiz</span>
+                </a>
+                <a href="{% url 'logout_user' %}" class="flex items-center px-3 py-2 rounded-lg hover:bg-red-50 text-red-600">
+                    <i class="fas fa-sign-out-alt mr-3 w-5"></i>
+                    <span>Se déconnecter</span>
+                </a>
+                {% else %}
+                <a href="{% url 'user_login' %}" class="flex items-center px-3 py-2 rounded-lg border border-primary-600 text-primary-600">
+                    <i class="fas fa-sign-in-alt mr-3 w-5"></i>
+                    <span>Se connecter</span>
+                </a>
+                <a href="{% url 'register_user' %}" class="flex items-center px-3 py-2 rounded-lg btn-primary text-white">
+                    <i class="fas fa-user-plus mr-3 w-5"></i>
+                    <span>S'inscrire</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
 
-    {% block content %}
+    <!-- Main Content -->
+    <main class="min-h-screen">
+        <!-- Hero Section (only on index page) -->
+        {% if request.path == '/' %}
+        <section class="py-12 md:py-20 pattern-dots">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="max-w-4xl mx-auto text-center">
+                    <div class="mb-8">
+                        <div class="inline-flex items-center px-4 py-2 rounded-full bg-primary-50 text-primary-700 font-medium mb-6">
+                            <i class="fas fa-star mr-2"></i>
+                            Intelligence Artificielle & Numérique pour l'Afrique
+                        </div>
+                        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                            Une éducation <span class="gradient-text">critique</span>, 
+                            <span class="text-secondary-600">inclusive</span> et 
+                            <span class="text-accent-600">responsable</span>
+                        </h1>
+                        <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                            Plateforme collaborative pour explorer l'IA et le numérique 
+                            dans une perspective africaine, éthique et éducative.
+                        </p>
+                        {% if not user.is_authenticated %}
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                            <a href="{% url 'register_user' %}" class="px-6 py-3 rounded-lg btn-primary font-medium">
+                                <i class="fas fa-rocket mr-2"></i>Rejoindre la communauté
+                            </a>
+                            <a href="{% url 'all_post' %}" class="px-6 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 font-medium">
+                                <i class="fas fa-compass mr-2"></i>Explorer les contenus
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12">
+                        <div class="glass-effect p-6 rounded-xl card-hover">
+                            <div class="text-3xl font-bold text-primary-600 mb-2">250+</div>
+                            <div class="text-gray-600">Articles éducatifs</div>
+                        </div>
+                        <div class="glass-effect p-6 rounded-xl card-hover">
+                            <div class="text-3xl font-bold text-secondary-600 mb-2">1.2k</div>
+                            <div class="text-gray-600">Étudiants actifs</div>
+                        </div>
+                        <div class="glass-effect p-6 rounded-xl card-hover">
+                            <div class="text-3xl font-bold text-accent-600 mb-2">50+</div>
+                            <div class="text-gray-600">Quiz interactifs</div>
+                        </div>
+                        <div class="glass-effect p-6 rounded-xl card-hover">
+                            <div class="text-3xl font-bold text-africa-sun mb-2">15</div>
+                            <div class="text-gray-600">Pays africains</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
 
-    {% endblock %}
+        <!-- Content Block -->
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {% block content %}
+            <!-- Content from child templates goes here -->
+            {% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white mt-20">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <!-- Logo and description -->
+                <div class="md:col-span-2">
+                    <div class="flex items-center mb-6">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mr-3">
+                            <i class="fas fa-brain text-white"></i>
+                        </div>
+                        <div>
+                            <span class="text-xl font-bold text-white">IA Éducative</span>
+                            <span class="text-xs text-gray-400 block">Afrique</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 mb-6 max-w-md">
+                        Plateforme dédiée à l'éducation critique sur l'Intelligence Artificielle 
+                        et le numérique en Afrique. Nous promouvons une approche inclusive, 
+                        éthique et responsable des technologies émergentes.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-800 hover:bg-primary-600 flex items-center justify-center transition-colors">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-800 hover:bg-primary-600 flex items-center justify-center transition-colors">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-800 hover:bg-primary-600 flex items-center justify-center transition-colors">
+                            <i class="fab fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Quick Links -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-6">Navigation</h3>
+                    <ul class="space-y-3">
+                        <li>
+                            <a href="{% url 'all_post' %}" class="text-gray-400 hover:text-white transition-colors flex items-center">
+                                <i class="fas fa-chevron-right text-xs mr-2"></i>
+                                Tous les posts
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'create_post' %}" class="text-gray-400 hover:text-white transition-colors flex items-center">
+                                <i class="fas fa-chevron-right text-xs mr-2"></i>
+                                Créer un post
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'quiz_page' %}" class="text-gray-400 hover:text-white transition-colors flex items-center">
+                                <i class="fas fa-chevron-right text-xs mr-2"></i>
+                                Quiz éducatifs
+                            </a>
+                        </li>
+                        {% if not user.is_authenticated %}
+                        <li>
+                            <a href="{% url 'user_login' %}" class="text-gray-400 hover:text-white transition-colors flex items-center">
+                                <i class="fas fa-chevron-right text-xs mr-2"></i>
+                                Connexion
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <!-- Contact/Info -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-6">À propos</h3>
+                    <ul class="space-y-3">
+                        <li class="text-gray-400 flex items-start">
+                            <i class="fas fa-map-marker-alt text-primary-400 mt-1 mr-3"></i>
+                            <span>Plateforme panafricaine</span>
+                        </li>
+                        <li class="text-gray-400 flex items-center">
+                            <i class="fas fa-envelope text-primary-400 mr-3"></i>
+                            <span>contact@ia-educative.africa</span>
+                        </li>
+                        <li class="text-gray-400 flex items-center">
+                            <i class="fas fa-graduation-cap text-primary-400 mr-3"></i>
+                            <span>Éducation & Recherche</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-8 p-4 bg-gray-800 rounded-lg">
+                        <div class="text-sm text-gray-400 mb-2">Initiative soutenue par</div>
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-africa-sun to-africa-gold mr-3"></div>
+                            <span class="text-white font-medium">Le Réseau Éducatif Africain</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Copyright -->
+            <div class="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500 text-sm">
+                <p>© 2024 IA Éducative Afrique. Tous droits réservés.</p>
+                <p class="mt-2">
+                    <a href="#" class="hover:text-gray-300 transition-colors mx-2">Conditions d'utilisation</a> • 
+                    <a href="#" class="hover:text-gray-300 transition-colors mx-2">Politique de confidentialité</a> • 
+                    <a href="#" class="hover:text-gray-300 transition-colors mx-2">Éthique et valeurs</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('animate-fade-in');
+        });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('mobile-menu');
+            const button = document.getElementById('mobile-menu-button');
+            
+            if (!menu.contains(event.target) && !button.contains(event.target)) {
+                if (!menu.classList.contains('hidden')) {
+                    menu.classList.add('hidden');
+                }
+            }
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add animation to cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-slide-up');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // Observe cards with class 'card-hover'
+        document.querySelectorAll('.card-hover').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Simple toast notification system
+        window.showToast = function(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-primary-500'} text-white`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+                toast.classList.add('translate-x-0');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0');
+                toast.classList.add('translate-x-full');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        };
+    </script>
 </body>
 </html>

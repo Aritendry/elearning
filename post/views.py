@@ -1,4 +1,4 @@
-from django.shortcuts import render , redirect
+from django.shortcuts import render , redirect , get_object_or_404
 from post.models import Post ,  Domain , UserPreference , PostRecommendation
 
 from django.utils.text import slugify
@@ -17,7 +17,7 @@ from django.core.cache import cache
 import hashlib
 
 import numpy as np
-from django.db.models import Count, Q
+from django.db.models import Count, Q , Avg
 from collections import defaultdict
 from django.utils import timezone
 
@@ -195,7 +195,162 @@ def generate_tags(post_content):
     except Exception as e:
         print("Erreur dans generate_tags:", e)
         return ["General", "Education"]
+
+# views.py - Ajoute ces imports en haut
+
+# Ajoute ces vues après les autres vues
+
+def user_profile(request, username):
+    """Affiche le profil d'un utilisateur"""
+    user = get_object_or_404(User, username=username)
     
+    # Récupérer les posts de l'utilisateur
+    posts = Post.objects.filter(author=user).order_by('-created_at')
+    
+    # Calculer les statistiques
+    stats = {
+        'total_posts': posts.count(),
+        'total_likes': sum(post.likes.count() for post in posts),
+        'total_dislikes': sum(post.dislikes.count() for post in posts),
+        'avg_made_ai': posts.aggregate(avg=Avg('made_ai'))['avg'],
+        'avg_fake_news': posts.aggregate(avg=Avg('fake_news'))['avg'],
+        'most_used_tags': Domain.objects.filter(post__author=user)
+            .annotate(post_count=Count('post'))
+            .order_by('-post_count')[:5]
+    }
+    
+    # Tags préférés (basés sur les likes reçus)
+    liked_posts = Post.objects.filter(likes__isnull=False, author=user)
+    popular_tags = Domain.objects.filter(post__in=liked_posts).annotate(like_count=Count('post__likes')).order_by('-like_count')[:3]
+    
+    context = {
+        'profile_user': user,
+        'posts': posts,
+        'stats': stats,
+        'popular_tags': popular_tags,
+        'is_owner': request.user == user
+    }
+    
+    return render(request, 'post/profile.html', context)
+
+@login_required
+def update_post(request, slug):
+    """Met à jour un post existant"""
+    post = get_object_or_404(Post, slug=slug, author=request.user)
+    
+    if request.method == 'POST':
+        # Récupérer les données
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+        media = request.FILES.get('media')
+        
+        # Mettre à jour le post
+        post.title = title
+        post.content = content
+        
+        if media:
+            post.media = media
+        
+        # Recalculer les scores IA/fake news
+        ia_score, fake_score = get_ai_fake_score(content)
+        post.made_ai = ia_score
+        post.fake_news = fake_score
+        
+        # Mettre à jour les tags
+        post.tags.clear()
+        tags = generate_tags(content)
+        for tag_name in tags:
+            domain_obj, created = Domain.objects.get_or_create(name=tag_name)
+            post.tags.add(domain_obj)
+        
+        post.save()
+        
+        messages.success(request, "Post mis à jour avec succès !")
+        return redirect('user_profile', username=request.user.username)
+    
+    context = {
+        'post': post,
+        'is_edit': True
+    }
+    return render(request, 'post/form_post.html', context)
+
+@login_required
+def delete_post(request, slug):
+    """Supprime un post"""
+    post = get_object_or_404(Post, slug=slug, author=request.user)
+    
+    if request.method == 'POST':
+        post.delete()
+        messages.success(request, "Post supprimé avec succès !")
+        return redirect('user_profile', username=request.user.username)
+    
+    return JsonResponse({'success': True})
+
+# Ajoute cette fonction pour le formulaire de création/modification
+@login_required
+def post_form(request, slug=None):
+    """Gère la création et modification de posts"""
+    post = None
+    is_edit = False
+    
+    if slug:
+        post = get_object_or_404(Post, slug=slug, author=request.user)
+        is_edit = True
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+        media = request.FILES.get('media')
+        
+        if is_edit:
+            # Mise à jour
+            post.title = title
+            post.content = content
+            if media:
+                post.media = media
+            
+            # Recalculer les scores
+            ia_score, fake_score = get_ai_fake_score(content)
+            post.made_ai = ia_score
+            post.fake_news = fake_score
+        else:
+            # Création
+            slug = slugify(title)
+            base_slug = slug
+            counter = 1
+            while Post.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            
+            ia_score, fake_score = get_ai_fake_score(content)
+            post = Post(
+                title=title,
+                content=content,
+                media=media,
+                slug=slug,
+                author=request.user,
+                made_ai=ia_score,
+                fake_news=fake_score
+            )
+        
+        post.save()
+        
+        # Gérer les tags
+        if not is_edit or 'update_tags' in request.POST:
+            post.tags.clear()
+            tags = generate_tags(content)
+            for tag_name in tags:
+                domain_obj, created = Domain.objects.get_or_create(name=tag_name)
+                post.tags.add(domain_obj)
+        
+        messages.success(request, f"Post {'mis à jour' if is_edit else 'créé'} avec succès !")
+        return redirect('user_profile', username=request.user.username)
+    
+    context = {
+        'post': post,
+        'is_edit': is_edit
+    }
+    return render(request, 'post/form_post.html', context)
 
 
 

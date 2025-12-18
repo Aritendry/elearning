@@ -1,42 +1,371 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="register-container">
-    <h2>Créer un compte</h2>
+<div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- En-tête -->
+    <div class="text-center mb-10">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 mb-4">
+            <i class="fas fa-user-plus text-white text-2xl"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Rejoignez notre communauté</h1>
+        <p class="text-gray-600">
+            Créez votre compte pour participer à la discussion sur l'IA en Afrique
+        </p>
+    </div>
 
+    <!-- Messages d'erreur/succès -->
     {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-                <li class="{{ message.tags }}">{{ message }}</li>
-            {% endfor %}
-        </ul>
+    <div class="mb-6 space-y-3">
+        {% for message in messages %}
+        <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-700{% elif message.tags == 'success' %}bg-green-50 border border-green-200 text-green-700{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+            <div class="flex items-center">
+                <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} mr-3"></i>
+                <span>{{ message }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
     {% endif %}
 
-    <form method="POST" action="">
-        {% csrf_token %}
-        <div>
-            <label for="username">Pseudo</label>
-            <input type="text" name="username" id="username" required>
+    <!-- Formulaire -->
+    <div class="glass-effect rounded-2xl p-8 shadow-lg">
+        <form method="POST" action="" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Pseudo -->
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-user text-primary-500 mr-2"></i>
+                        Pseudo
+                    </div>
+                </label>
+                <input 
+                    type="text" 
+                    name="username" 
+                    id="username" 
+                    required
+                    placeholder="Choisissez un nom d'utilisateur unique"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                    oninput="validateUsername()"
+                >
+                <div class="mt-2 flex items-center hidden" id="username-availability">
+                    <i id="username-icon" class="fas mr-2"></i>
+                    <span id="username-message" class="text-sm"></span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Entre 3 et 20 caractères, lettres et chiffres uniquement</p>
+            </div>
+
+            <!-- Email -->
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-envelope text-primary-500 mr-2"></i>
+                        Adresse email
+                    </div>
+                </label>
+                <input 
+                    type="email" 
+                    name="email" 
+                    id="email" 
+                    required
+                    placeholder="votre@email.com"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                >
+                <p class="text-xs text-gray-500 mt-1">Nous ne partagerons jamais votre email</p>
+            </div>
+
+            <!-- Mot de passe -->
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-lock text-primary-500 mr-2"></i>
+                        Mot de passe
+                    </div>
+                </label>
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        name="password" 
+                        id="password" 
+                        required
+                        placeholder="Créez un mot de passe sécurisé"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                        oninput="validatePassword()"
+                    >
+                    <button type="button" class="absolute right-3 top-3 text-gray-500 hover:text-gray-700" onclick="togglePassword('password')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="mt-3 space-y-2">
+                    <div class="flex items-center">
+                        <i id="length-check" class="fas fa-circle text-gray-300 text-xs mr-2"></i>
+                        <span class="text-xs text-gray-600">Au moins 8 caractères</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i id="number-check" class="fas fa-circle text-gray-300 text-xs mr-2"></i>
+                        <span class="text-xs text-gray-600">Contient un chiffre</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i id="special-check" class="fas fa-circle text-gray-300 text-xs mr-2"></i>
+                        <span class="text-xs text-gray-600">Contient un caractère spécial</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirmation mot de passe -->
+            <div>
+                <label for="password2" class="block text-sm font-medium text-gray-700 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-lock text-primary-500 mr-2"></i>
+                        Confirmer le mot de passe
+                    </div>
+                </label>
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        name="password2" 
+                        id="password2" 
+                        required
+                        placeholder="Retapez votre mot de passe"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                        oninput="checkPasswordMatch()"
+                    >
+                    <button type="button" class="absolute right-3 top-3 text-gray-500 hover:text-gray-700" onclick="togglePassword('password2')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="mt-2 flex items-center hidden" id="password-match">
+                    <i id="match-icon" class="fas mr-2"></i>
+                    <span id="match-message" class="text-sm"></span>
+                </div>
+            </div>
+
+            <!-- Consentement -->
+            <div class="bg-primary-50 rounded-lg p-4">
+                <div class="flex items-start">
+                    <input 
+                        type="checkbox" 
+                        id="consent" 
+                        name="consent" 
+                        required
+                        class="mt-1 mr-3 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    >
+                    <label for="consent" class="text-sm text-gray-700">
+                        En créant un compte, j'accepte les 
+                        <a href="#" class="text-primary-600 hover:text-primary-700 font-medium">Conditions d'utilisation</a> 
+                        et la 
+                        <a href="#" class="text-primary-600 hover:text-primary-700 font-medium">Politique de confidentialité</a>. 
+                        Je comprends que mes contributions seront analysées par notre IA pour assurer la qualité du contenu.
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bouton d'inscription -->
+            <button type="submit" class="w-full px-6 py-3 rounded-lg btn-primary font-medium text-lg">
+                <i class="fas fa-rocket mr-2"></i>Créer mon compte
+            </button>
+        </form>
+
+        <!-- Lien de connexion -->
+        <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+            <p class="text-gray-600">
+                Déjà membre ? 
+                <a href="{% url 'user_login' %}" class="text-primary-600 hover:text-primary-700 font-medium">
+                    <i class="fas fa-sign-in-alt mr-1"></i>Connectez-vous ici
+                </a>
+            </p>
         </div>
 
-        <div>
-            <label for="email">Email</label>
-            <input type="email" name="email" id="email" required>
+        <!-- Avantages -->
+        <div class="mt-8 grid grid-cols-2 gap-4">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                    <i class="fas fa-book text-green-600"></i>
+                </div>
+                <span class="text-sm text-gray-700">Accès aux articles</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                    <i class="fas fa-comment text-blue-600"></i>
+                </div>
+                <span class="text-sm text-gray-700">Participez aux discussions</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+                    <i class="fas fa-graduation-cap text-purple-600"></i>
+                </div>
+                <span class="text-sm text-gray-700">Quiz éducatifs</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mr-3">
+                    <i class="fas fa-users text-orange-600"></i>
+                </div>
+                <span class="text-sm text-gray-700">Communauté africaine</span>
+            </div>
         </div>
-
-        <div>
-            <label for="password">Mot de passe</label>
-            <input type="password" name="password" id="password" required>
-        </div>
-
-        <div>
-            <label for="password2">Confirmer le mot de passe</label>
-            <input type="password" name="password2" id="password2" required>
-        </div>
-
-        <button type="submit">S'inscrire</button>
-    </form>
-
-    <p>Déjà un compte ? <a href="{% url 'user_login' %}">Connecte-toi ici</a>.</p>
+    </div>
 </div>
+
+<script>
+// Validation du nom d'utilisateur
+function validateUsername() {
+    const username = document.getElementById('username').value;
+    const availabilityDiv = document.getElementById('username-availability');
+    const icon = document.getElementById('username-icon');
+    const message = document.getElementById('username-message');
+    
+    if (username.length === 0) {
+        availabilityDiv.classList.add('hidden');
+        return;
+    }
+    
+    if (username.length < 3) {
+        availabilityDiv.classList.remove('hidden');
+        icon.className = 'fas fa-times text-red-500 mr-2';
+        message.textContent = 'Trop court (min 3 caractères)';
+        message.className = 'text-sm text-red-600';
+    } else if (username.length > 20) {
+        availabilityDiv.classList.remove('hidden');
+        icon.className = 'fas fa-times text-red-500 mr-2';
+        message.textContent = 'Trop long (max 20 caractères)';
+        message.className = 'text-sm text-red-600';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        availabilityDiv.classList.remove('hidden');
+        icon.className = 'fas fa-times text-red-500 mr-2';
+        message.textContent = 'Lettres, chiffres et _ uniquement';
+        message.className = 'text-sm text-red-600';
+    } else {
+        availabilityDiv.classList.remove('hidden');
+        icon.className = 'fas fa-check text-green-500 mr-2';
+        message.textContent = 'Format valide';
+        message.className = 'text-sm text-green-600';
+    }
+}
+
+// Validation du mot de passe
+function validatePassword() {
+    const password = document.getElementById('password').value;
+    
+    // Vérification longueur
+    const lengthCheck = document.getElementById('length-check');
+    if (password.length >= 8) {
+        lengthCheck.className = 'fas fa-check-circle text-green-500 text-xs mr-2';
+    } else {
+        lengthCheck.className = 'fas fa-circle text-gray-300 text-xs mr-2';
+    }
+    
+    // Vérification chiffre
+    const numberCheck = document.getElementById('number-check');
+    if (/\d/.test(password)) {
+        numberCheck.className = 'fas fa-check-circle text-green-500 text-xs mr-2';
+    } else {
+        numberCheck.className = 'fas fa-circle text-gray-300 text-xs mr-2';
+    }
+    
+    // Vérification caractère spécial
+    const specialCheck = document.getElementById('special-check');
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        specialCheck.className = 'fas fa-check-circle text-green-500 text-xs mr-2';
+    } else {
+        specialCheck.className = 'fas fa-circle text-gray-300 text-xs mr-2';
+    }
+    
+    // Vérifier la correspondance si le deuxième champ est rempli
+    checkPasswordMatch();
+}
+
+// Vérifier si les mots de passe correspondent
+function checkPasswordMatch() {
+    const password = document.getElementById('password').value;
+    const password2 = document.getElementById('password2').value;
+    const matchDiv = document.getElementById('password-match');
+    const matchIcon = document.getElementById('match-icon');
+    const matchMessage = document.getElementById('match-message');
+    
+    if (password2.length === 0) {
+        matchDiv.classList.add('hidden');
+        return;
+    }
+    
+    if (password === password2) {
+        matchDiv.classList.remove('hidden');
+        matchIcon.className = 'fas fa-check text-green-500 mr-2';
+        matchMessage.textContent = 'Les mots de passe correspondent';
+        matchMessage.className = 'text-sm text-green-600';
+    } else {
+        matchDiv.classList.remove('hidden');
+        matchIcon.className = 'fas fa-times text-red-500 mr-2';
+        matchMessage.textContent = 'Les mots de passe ne correspondent pas';
+        matchMessage.className = 'text-sm text-red-600';
+    }
+}
+
+// Afficher/masquer le mot de passe
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const button = field.parentNode.querySelector('button');
+    const icon = button.querySelector('i');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+// Initialiser les validations
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation initiale si les champs sont pré-remplis (après une erreur de soumission)
+    validateUsername();
+    validatePassword();
+    checkPasswordMatch();
+    
+    // Ajouter une animation à la soumission
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function() {
+        const submitButton = this.querySelector('button[type="submit"]');
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Création du compte...';
+        submitButton.disabled = true;
+    });
+});
+</script>
+
+<style>
+/* Animation pour le bouton de soumission */
+button[type="submit"]:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Animation de chargement */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Style pour les checkboxes */
+input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+}
+
+/* Style pour les messages d'erreur */
+.bg-red-50 {
+    background-color: rgba(254, 226, 226, 0.8);
+}
+
+.bg-green-50 {
+    background-color: rgba(209, 250, 229, 0.8);
+}
+
+.bg-blue-50 {
+    background-color: rgba(219, 234, 254, 0.8);
+}
+</style>
 {% endblock %}
