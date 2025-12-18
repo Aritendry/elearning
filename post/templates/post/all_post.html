@@ -30,8 +30,17 @@
 
     {% if post.made_ai is not None or post.fake_news is not None %}
       <p>
-        <strong>Score IA :</strong> {{ post.made_ai|default:"N/A" }} / 100 —
+        <strong>Score IA :</strong> {{ post.made_ai|default:"N/A" }} / 100 — 
         <strong>Score Fake News :</strong> {{ post.fake_news|default:"N/A" }} / 100
+      </p>
+    {% endif %}
+
+    {% if post.tags.all %}
+      <p>
+        <strong>Tags :</strong>
+        {% for tag in post.tags.all %}
+          <span>#{{ tag.name }}</span>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
       </p>
     {% endif %}
 

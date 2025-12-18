@@ -1,5 +1,11 @@
 from django.db import models
 
+class Domain(models.Model):
+    name = models.CharField(max_length=100, unique=True , blank=False , null=False)
+
+    def __str__(self):
+        return self.name
+
 # Create your models here.
 class Post(models.Model):
     title = models.CharField(max_length=100 , blank=False , null=False)
@@ -10,6 +16,8 @@ class Post(models.Model):
     media = models.FileField(upload_to='media/' , blank=True , null=True)
     slug = models.SlugField(max_length=150 , unique=True , blank=False , null=False)
     author = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    tags = models.ManyToManyField(Domain , blank=True)
+    
 
 
     @property

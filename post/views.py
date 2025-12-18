@@ -1,5 +1,5 @@
 from django.shortcuts import render , redirect
-from post.models import Post
+from post.models import Post , Domain
 
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
@@ -62,7 +62,6 @@ def create_post(request):
         content = request.POST.get("content")
         media = request.FILES.get("media")
         
-        # Slug automatique
         slug = slugify(title)
         base_slug = slug
         counter = 1
@@ -70,7 +69,6 @@ def create_post(request):
             slug = f"{base_slug}-{counter}"
             counter += 1
 
-        # 🔹 Ici on récupère les scores AI et fake
         ia_score, fake_score = get_ai_fake_score(content)
 
         post = Post(
@@ -83,10 +81,17 @@ def create_post(request):
             fake_news=fake_score
         )
         post.save()
+
+        # génération des tags - CORRECTION ICI
+        tags = generate_tags(content)
+        for tag_name in tags:
+            # récupère ou crée le Domain correspondant
+            domain_obj, created = Domain.objects.get_or_create(name=tag_name)
+            post.tags.add(domain_obj)  # <-- CHANGER domains en tags
+
         return redirect('index')
 
-    return render(request, "post/form_post.html")
-   
+    return render(request, "post/form_post.html") 
 def all_post(request):
     posts = Post.objects.all().order_by('-created_at')
     return render(request, 'post/all_post.html', context={'posts': posts})
@@ -98,9 +103,67 @@ def detail_post(request, slug):
 def view_api_response(request):
     return render(request, 'post/test_api.html')
 
-"""
-QUIZ GENERATOR VIEW
-"""
+def generate_tags(post_content):
+    prompt = f"""
+    Voici un texte :
+    {post_content}
+
+    Analyse ce texte et suggère 3 à 5 tags appropriés.
+    Choisis parmi ces catégories : Science, Technology, Art, History,
+    Sports, Education, Entertainment, Politics, Health, Environment, Business, Travel, Food, Culture, Gaming, Philosophy.
+    
+    Retourne uniquement une liste JSON comme : ["Tag1", "Tag2", "Tag3"]
+    """
+    
+    try:
+        output = model.run([{"role": "user", "content": prompt}])
+        if output.output is None:
+            raise ValueError("API ne répond pas")
+        raw_content = output.output.get("content")
+        
+        # Nettoyer et parser
+        clean_content = raw_content.strip()
+        
+        # Gérer différents formats de réponse
+        if clean_content.startswith('[') and clean_content.endswith(']'):
+            tags = json.loads(clean_content)
+        elif '"' in clean_content:
+            # Essaye de trouver les éléments entre guillemets
+            import re
+            tags = re.findall(r'"([^"]+)"', clean_content)
+        else:
+            # Séparer par virgules ou retours à la ligne
+            tags = [tag.strip() for tag in clean_content.split(',') if tag.strip()]
+        
+        # Limiter à 5 tags max
+        tags = tags[:5]
+        
+        # Valider les tags (optionnel)
+        valid_categories = ["Science", "Technology", "Art", "History", "Sports", 
+                          "Education", "Entertainment", "Politics", "Health", 
+                          "Environment", "Business", "Travel", "Food", "Culture", 
+                          "Gaming", "Philosophy"]
+        
+        # Nettoyer les tags
+        cleaned_tags = []
+        for tag in tags:
+            # Capitaliser la première lettre
+            tag = tag.strip().title()
+            # Vérifier si le tag est valide (optionnel)
+            if tag in valid_categories:
+                cleaned_tags.append(tag)
+            elif not valid_categories:  # Si on n'a pas de liste restreinte
+                cleaned_tags.append(tag)
+        
+        if not cleaned_tags:
+            cleaned_tags = ["General", "Education"]
+            
+        return cleaned_tags
+        
+    except Exception as e:
+        print("Erreur dans generate_tags:", e)
+        return ["General", "Education"]
+    
 PALIER_THEMES = {
     1: ["Bases du sujet", "Vocabulaire clé", "Concepts simples"],
     2: ["Concepts intermédiaires", "Exemples pratiques"],
