@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from post.views import index , create_post
+from post.views import index , create_post , all_post
 
 # Permettre à Django de lire les fichiers média en mode développement
 from django.conf import settings
@@ -27,6 +27,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', index, name='index'),
     path('create_post/', create_post, name='create_post'),
+    path('all_post/', all_post, name='all_post'),
 
 ]
 

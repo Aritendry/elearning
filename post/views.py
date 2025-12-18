@@ -1,5 +1,5 @@
 from django.shortcuts import render , redirect
-from models import Post
+from post.models import Post
 
 from django.utils.text import slugify
 from django.contrib.auth.decorators import login_required
@@ -35,7 +35,9 @@ def create_post(request):
             author=request.user
         )
         post.save()
+        return redirect('index')
+    return render(request, "post/form_post.html")    
 
-        return redirect("post_detail", slug=post.slug)
-
-    return render(request, "form_post.html")    
+def all_post(request):
+    posts = Post.objects.all().order_by('-created_at')
+    return render(request, 'post/all_post.html', context={'posts': posts})

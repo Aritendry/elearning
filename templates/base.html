@@ -6,8 +6,10 @@
     <title>elearning</title>
 </head>
 <body>
+    <a href="{% url 'create_post' %}">Créer un post</a>
+    <a href="{% url 'all_post' %}">Voir tous les posts</a>
     {% block content %}
-    
+
     {% endblock %}
 </body>
 </html>

@@ -10,5 +10,11 @@ class Post(models.Model):
     slug = models.SlugField(max_length=150 , unique=True , blank=False , null=False)
     author = models.ForeignKey('auth.User', on_delete=models.CASCADE)
 
+    @property
+    def is_video(self):
+        if not self.media:
+            return False
+        return self.media.name.lower().endswith(('.mp4', '.webm', '.mov'))
+    
     def __str__(self):
         return f"Title : {self.title} , Author : {self.author.username} , Created at : {self.created_at}"
