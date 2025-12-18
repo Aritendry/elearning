@@ -13,6 +13,8 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login , logout
 
+from django.core.cache import cache
+import hashlib
 
 BYTEZ_KEY = "ed333e5f71baeb5a3f75b54b3db52102"
 sdk = Bytez(BYTEZ_KEY)
@@ -164,6 +166,9 @@ def generate_tags(post_content):
         print("Erreur dans generate_tags:", e)
         return ["General", "Education"]
     
+
+
+
 PALIER_THEMES = {
     1: ["Bases du sujet", "Vocabulaire clé", "Concepts simples"],
     2: ["Concepts intermédiaires", "Exemples pratiques"],
@@ -174,10 +179,169 @@ PALIER_THEMES = {
     7: ["Problèmes complexes", "Comparaisons"],
     8: ["Synthèse", "Interprétation"],
     9: ["Projets complets", "Intégration multi-concepts"],
-    10:["Expertise avancée", "Défis et exercices complexes"]
+    10: ["Expertise avancée", "Défis et exercices complexes"]
 }
 
+class QuizGenerator:
+    """Classe optimisée pour la génération de quiz avec cache et batch processing"""
+    
+    def __init__(self, model):
+        self.model = model
+        self.cache_timeout = 3600  # 1 heure en cache
+        
+    def _get_cache_key(self, age, topic, palier):
+        """Génère une clé de cache unique pour le quiz"""
+        key_str = f"quiz_{age}_{topic}_{palier}"
+        return hashlib.md5(key_str.encode()).hexdigest()
+    
+    def _build_complete_prompt(self, age, topic, palier):
+        """Construit le prompt pour générer les 5 questions d'un palier en une requête"""
+        themes = PALIER_THEMES.get(palier, ["Concepts généraux"])
+        
+        return f"""
+Tu es un générateur de quiz éducatif intelligent. Crée 5 questions progressives pour un élève de {age} ans.
+
+CONTEXTE:
+- Sujet: {topic}
+- Palier {palier} (thèmes: {', '.join(themes)})
+- Difficulté: progressive du niveau 1 (facile) au niveau 5 (difficile)
+
+INSTRUCTIONS:
+1. Question 1 (niveau 1): Très simple, vérifie la compréhension des bases
+2. Question 2 (niveau 2): Introduit des concepts intermédiaires
+3. Question 3 (niveau 3): Application pratique des concepts
+4. Question 4 (niveau 4): Analyse ou étude de cas
+5. Question 5 (niveau 5): Le plus difficile, teste la maîtrise approfondie
+
+EXIGENCES:
+- Chaque question doit être claire et concise
+- Les choix doivent être plausibles (éviter les indices évidents)
+- La bonne réponse doit être justifiée
+
+FORMAT DE RÉPONSE:
+Retourne STRICTEMENT ce JSON (rien d'autre):
+{{
+  "questions": [
+    {{
+      "question": "Texte de la question niveau 1",
+      "choices": ["Choix A", "Choix B", "Choix C", "Choix D"],
+      "answer_index": 0,
+      "explanation": "Explication courte de la réponse correcte"
+    }},
+    // ... 4 autres objets identiques
+  ]
+}}
+
+IMPORTANT: Ne génère que le JSON, aucun texte supplémentaire.
+"""
+    
+    def _parse_quiz_response(self, raw_content, palier):
+        """Parse et valide la réponse de l'API"""
+        try:
+            # Essayer de parser le JSON directement
+            if isinstance(raw_content, str):
+                data = json.loads(raw_content)
+            else:
+                data = raw_content
+            
+            # Valider la structure
+            if "questions" not in data:
+                # Peut-être que l'API a retourné directement le tableau
+                if isinstance(data, list):
+                    questions = data[:5]  # Prendre max 5 questions
+                else:
+                    raise ValueError("Format de réponse invalide")
+            else:
+                questions = data["questions"][:5]  # Limiter à 5 questions
+            
+            # Ajouter les métadonnées manquantes
+            for i, q in enumerate(questions, 1):
+                q["level"] = i
+                q["palier"] = palier
+                q["theme"] = PALIER_THEMES.get(palier, ["Général"])[0]  # Premier thème du palier
+                q.setdefault("explanation", "Réponse correcte.")
+                
+                # Validation minimale
+                if not all(key in q for key in ["question", "choices", "answer_index"]):
+                    raise ValueError(f"Question {i} incomplète")
+            
+            return questions
+            
+        except json.JSONDecodeError as e:
+            # Essayer d'extraire le JSON de la réponse textuelle
+            print(f"Erreur de parsing JSON: {e}")
+            print(f"Raw content: {raw_content}")
+            return None
+        except Exception as e:
+            print(f"Erreur lors du parsing: {e}")
+            return None
+    
+    def _generate_fallback_questions(self, palier):
+        """Génère des questions de secours en cas d'erreur"""
+        return [
+            {
+                "question": f"Palier {palier} - Question {i} (Quelle est la bonne réponse ?)",
+                "choices": [f"Réponse A (correcte)", f"Réponse B", f"Réponse C", f"Réponse D"],
+                "answer_index": 0,
+                "level": i,
+                "palier": palier,
+                "theme": PALIER_THEMES.get(palier, ["Général"])[0],
+                "explanation": "Cette question est générée automatiquement en attendant la version finale."
+            }
+            for i in range(1, 6)
+        ]
+    
+    def generate_for_palier(self, age, topic, palier):
+        """Génère les 5 questions d'un palier spécifique"""
+        # Vérifier le cache d'abord
+        cache_key = self._get_cache_key(age, topic, palier)
+        cached = cache.get(cache_key)
+        
+        if cached:
+            print(f" Quiz récupéré du cache: {cache_key}")
+            return cached
+        
+        print(f" Génération du quiz pour palier {palier}...")
+        
+        try:
+            # Construire le prompt
+            prompt = self._build_complete_prompt(age, topic, palier)
+            
+            # Appeler l'API
+            response = self.model.run([{"role": "user", "content": prompt}])
+            
+            # Vérifier les erreurs
+            if response.output is None or response.error:
+                print(f" Erreur API pour palier {palier}: {response.error}")
+                questions = self._generate_fallback_questions(palier)
+            else:
+                # Parser la réponse
+                raw_content = response.output.get("content", "")
+                questions = self._parse_quiz_response(raw_content, palier)
+                
+                # Si parsing échoue, utiliser fallback
+                if not questions:
+                    print(f"  Parsing échoué pour palier {palier}")
+                    questions = self._generate_fallback_questions(palier)
+            
+            # Mettre en cache
+            cache.set(cache_key, questions, self.cache_timeout)
+            print(f" Quiz généré et mis en cache: {cache_key}")
+            
+            return questions
+            
+        except Exception as e:
+            print(f" Exception pour palier {palier}: {e}")
+            questions = self._generate_fallback_questions(palier)
+            cache.set(cache_key, questions, 300)  # Cache court pour les erreurs
+            return questions
+
+# Initialiser le générateur de quiz
+quiz_generator = QuizGenerator(model)
+
+# Fonctions de compatibilité (pour les appels existants si nécessaire)
 def build_quiz_prompt(age, topic, palier, level):
+    """Fonction maintenue pour compatibilité"""
     return f"""
 Tu es un générateur de quiz éducatif.
 
@@ -187,7 +351,6 @@ Palier: {palier}
 Niveau: {level}
 
 Retourne STRICTEMENT ce JSON (rien d'autre) :
-
 {{
   "question": "...",
   "choices": ["...", "...", "...", "..."],
@@ -196,43 +359,47 @@ Retourne STRICTEMENT ce JSON (rien d'autre) :
 """
 
 def call_quiz_ai(age, topic, palier, level):
-    prompt = build_quiz_prompt(age, topic, palier, level)
-    response = model.run([{"role": "user", "content": prompt}])
-
-    print("Raw Bytez output:", response)  # log complet
-
-    # Vérification sécurité
-    if response.output is None or response.error:
-        print("Erreur Bytez ou limite atteinte:", response.error)
-        # fallback temporaire
-        return {
-            "question": f"Question {level} du palier {palier} (mock)",
-            "choices": ["A", "B", "C", "D"],
-            "answer_index": 0
-        }
-
-    raw_content = response.output.get("content")
-    print("Content extrait:", raw_content)
-    return json.loads(raw_content)
+    """Fonction maintenue pour compatibilité (utilise désormais le générateur)"""
+    # Générer tout le palier et extraire la question demandée
+    questions = quiz_generator.generate_for_palier(age, topic, palier)
+    
+    # Trouver la question du niveau demandé
+    for q in questions:
+        if q.get("level") == level:
+            return {
+                "question": q["question"],
+                "choices": q["choices"],
+                "answer_index": q["answer_index"]
+            }
+    
+    # Fallback si non trouvé
+    return {
+        "question": f"Question {level} du palier {palier}",
+        "choices": ["A", "B", "C", "D"],
+        "answer_index": 0
+    }
 
 def build_quiz(age, topic):
+    """Génère un quiz complet (10 paliers) - OPTIMISÉ"""
     quiz = {"age": age, "topic": topic, "paliers": []}
-
+    
     for palier in range(1, 11):
-        palier_data = {"palier": palier, "levels": []}
-
-        for level in range(1, 6):
-            q = call_quiz_ai(age, topic, palier, level)
-            q["level"] = level
-            palier_data["levels"].append(q)
-
+        # Générer les 5 questions du palier
+        questions = quiz_generator.generate_for_palier(age, topic, palier)
+        
+        palier_data = {
+            "palier": palier,
+            "levels": questions  # Contient déjà les 5 niveaux
+        }
+        
         quiz["paliers"].append(palier_data)
-
+    
     return quiz
 
 @csrf_exempt
 def generate_quiz(request):
-    palier = int(request.POST.get("palier", 0))  # 0 = question d’attente
+    """Vue optimisée pour générer un palier de quiz"""
+    palier = int(request.POST.get("palier", 0))  # 0 = question d'attente
     age = request.POST.get("age")
     topic = request.POST.get("topic")
 
@@ -248,17 +415,9 @@ def generate_quiz(request):
             "answer_index": 0
         })
     else:
-        # génération du palier demandé (1 à 10)
-        questions = []
-        for level in range(1, 6):
-            q = call_quiz_ai(age, topic, palier, level)
-            q["palier"] = palier
-            q["level"] = level
-            # Assurer qu'un thème est défini pour chaque question
-            if "theme" not in q:
-                q["theme"] = f"Thème du palier {palier}"
-            questions.append(q)
-
+        # Génération optimisée du palier demandé (1 à 10)
+        questions = quiz_generator.generate_for_palier(age, topic, palier)
+        
         return JsonResponse({
             "palier": palier,
             "questions": questions
@@ -266,7 +425,6 @@ def generate_quiz(request):
 
 def quiz_page(request):
     return render(request, "post/quiz.html")
-
 """
 Creation du CRUD utilisateur
 """

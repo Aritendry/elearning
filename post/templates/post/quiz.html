@@ -4,7 +4,7 @@
 
 <div id="quiz-container">
   <form id="quiz-form">
-    <input type="number" id="age" placeholder="Ton âge" required />
+    <input type="number" id="age" placeholder="Ton âge" required min="5" max="120" />
     <input type="text" id="topic" placeholder="Ce que tu veux apprendre" required />
     <button type="submit">Lancer le quiz</button>
   </form>
@@ -13,8 +13,73 @@
     <h4 id="palier-theme"></h4>
     <h3 id="question-text"></h3>
     <div id="choices-container"></div>
+    <div id="explanation-container" style="display:none; margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+      <p><strong>Explication :</strong> <span id="explanation-text"></span></p>
+    </div>
+    <button id="next-button" style="display:none; margin-top: 15px;">Question suivante →</button>
+    <div id="loading" style="display:none; text-align: center; margin: 20px;">
+      <p>Chargement du prochain palier...</p>
+      <div class="spinner"></div>
+    </div>
   </div>
 </div>
+
+<style>
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 10px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.choice-btn {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.choice-btn:hover {
+  background: #f8f9fa;
+  border-color: #007bff;
+}
+
+.choice-btn.correct {
+  background: #d4edda;
+  border-color: #28a745;
+}
+
+.choice-btn.incorrect {
+  background: #f8d7da;
+  border-color: #dc3545;
+}
+
+#next-button {
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#next-button:hover {
+  background: #0056b3;
+}
+</style>
 
 <script>
 const quizForm = document.getElementById("quiz-form");
@@ -22,21 +87,45 @@ const questionSection = document.getElementById("question-section");
 const questionText = document.getElementById("question-text");
 const choicesContainer = document.getElementById("choices-container");
 const palierTheme = document.getElementById("palier-theme");
+const explanationContainer = document.getElementById("explanation-container");
+const explanationText = document.getElementById("explanation-text");
+const nextButton = document.getElementById("next-button");
+const loadingDiv = document.getElementById("loading");
 
 let age, topic;
 let currentPalier = 0;
+let currentQuestions = []; // Stocke les 5 questions du palier courant
+let currentQuestionIndex = 0;
+let userScore = 0;
 
+// Validation du formulaire
 quizForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  age = document.getElementById("age").value;
-  topic = document.getElementById("topic").value;
-
+  age = parseInt(document.getElementById("age").value);
+  topic = document.getElementById("topic").value.trim();
+  
+  if (!age || age < 5 || age > 120) {
+    alert("Veuillez entrer un âge valide (entre 5 et 120 ans)");
+    return;
+  }
+  
+  if (!topic || topic.length < 2) {
+    alert("Veuillez entrer un sujet valide (au moins 2 caractères)");
+    return;
+  }
+  
   quizForm.style.display = "none";
-  await loadPalier(0); // question de préparation
+  questionSection.style.display = "block";
+  await loadPalier(0); // Question de préparation
 });
 
 async function loadPalier(palier) {
   try {
+    // Afficher le loading pour les paliers > 0
+    if (palier > 0) {
+      showLoading();
+    }
+    
     const res = await fetch("/quiz/generate/", {
       method: "POST",
       headers: {
@@ -46,59 +135,179 @@ async function loadPalier(palier) {
       body: new URLSearchParams({ age, topic, palier })
     });
 
+    if (!res.ok) {
+      throw new Error(`Erreur HTTP: ${res.status}`);
+    }
+    
     const data = await res.json();
+    
+    // Cacher le loading
+    hideLoading();
 
     if (palier === 0) {
-      // question d’attente
-      displayQuestion(data, async () => {
+      // Question d'attente
+      displayWelcomeMessage(data, () => {
         currentPalier = 1;
-        await loadPalier(currentPalier);
+        loadPalier(currentPalier);
       });
     } else {
-      // vrai palier
-      displayPalier(data);
+      // Stocker toutes les questions du palier
+      currentQuestions = data.questions || [];
+      currentQuestionIndex = 0;
+      userScore = 0; // Réinitialiser le score pour le nouveau palier
+      
+      if (currentQuestions.length === 0) {
+        showError("Aucune question n'a été générée pour ce palier.");
+        return;
+      }
+      
+      // Afficher la première question
+      displayQuestion(currentQuestions[0]);
     }
   } catch (err) {
     console.error(err);
+    hideLoading();
+    showError("Erreur de chargement du quiz. Veuillez réessayer.");
   }
 }
 
-function displayQuestion(q, callback) {
-  questionSection.style.display = "block";
-  questionText.textContent = q.question;
-  palierTheme.textContent = q.theme ? `Thème : ${q.theme}` : `Palier ${q.palier} - Question ${q.level || ""}`;
-  
+function showLoading() {
+  questionText.textContent = "";
   choicesContainer.innerHTML = "";
-  q.choices.forEach((choice, index) => {
-    const btn = document.createElement("button");
-    btn.textContent = choice;
-    btn.classList.add("choice-btn");
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      callback();
-    });
-    choicesContainer.appendChild(btn);
-  });
+  explanationContainer.style.display = "none";
+  nextButton.style.display = "none";
+  loadingDiv.style.display = "block";
 }
 
-async function displayPalier(palierData) {
-  let levels = palierData.questions || [];
-  let levelIndex = 0;
+function hideLoading() {
+  loadingDiv.style.display = "none";
+}
 
-  async function nextLevel() {
-    if (levelIndex >= levels.length) {
-      // palier terminé, passer au suivant
-      currentPalier++;
-      await loadPalier(currentPalier);
-      return;
-    }
-    displayQuestion(levels[levelIndex], () => {
-      levelIndex++;
-      nextLevel();
+function showError(message) {
+  questionText.textContent = "Erreur";
+  choicesContainer.innerHTML = `<p style="color: red;">${message}</p>`;
+  palierTheme.textContent = "Problème technique";
+  nextButton.style.display = "block";
+  nextButton.textContent = "Réessayer";
+  nextButton.onclick = () => loadPalier(currentPalier);
+}
+
+function displayWelcomeMessage(data, callback) {
+  questionSection.style.display = "block";
+  questionText.textContent = data.question || "Bienvenue au quiz !";
+  palierTheme.textContent = "Préparation...";
+  choicesContainer.innerHTML = "";
+  
+  // Créer un bouton pour commencer
+  const startBtn = document.createElement("button");
+  startBtn.textContent = data.choices && data.choices[0] ? data.choices[0] : "Commencer le quiz";
+  startBtn.classList.add("choice-btn");
+  startBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    callback();
+  });
+  choicesContainer.appendChild(startBtn);
+  
+  explanationContainer.style.display = "none";
+  nextButton.style.display = "none";
+}
+
+function displayQuestion(question) {
+  questionSection.style.display = "block";
+  questionText.textContent = question.question;
+  
+  // Afficher les informations du palier/niveau
+  const level = question.level || currentQuestionIndex + 1;
+  const theme = question.theme || `Palier ${currentPalier}`;
+  palierTheme.textContent = `Palier ${currentPalier} - Question ${level} | ${theme}`;
+  
+  // Afficher les choix
+  choicesContainer.innerHTML = "";
+  if (question.choices && Array.isArray(question.choices)) {
+    question.choices.forEach((choice, index) => {
+      const btn = document.createElement("button");
+      btn.textContent = choice;
+      btn.classList.add("choice-btn");
+      btn.dataset.index = index;
+      
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        handleAnswerSelection(question, index);
+      });
+      
+      choicesContainer.appendChild(btn);
     });
   }
+  
+  // Cacher l'explication et le bouton suivant
+  explanationContainer.style.display = "none";
+  nextButton.style.display = "none";
+}
 
-  nextLevel();
+function handleAnswerSelection(question, selectedIndex) {
+  const correctIndex = question.answer_index || 0;
+  const buttons = document.querySelectorAll('.choice-btn');
+  
+  // Désactiver tous les boutons
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    btn.style.cursor = "not-allowed";
+  });
+  
+  // Marquer la bonne réponse
+  buttons[correctIndex].classList.add("correct");
+  
+  // Si mauvaise réponse, marquer celle choisie
+  if (selectedIndex !== correctIndex) {
+    buttons[selectedIndex].classList.add("incorrect");
+  } else {
+    userScore++; // Incrémenter le score si bonne réponse
+  }
+  
+  // Afficher l'explication si disponible
+  if (question.explanation) {
+    explanationText.textContent = question.explanation;
+    explanationContainer.style.display = "block";
+  }
+  
+  // Afficher le bouton suivant
+  nextButton.style.display = "block";
+  nextButton.textContent = currentQuestionIndex < currentQuestions.length - 1 
+    ? "Question suivante →" 
+    : `Palier suivant (Score: ${userScore}/${currentQuestions.length})`;
+  
+  nextButton.onclick = () => {
+    if (currentQuestionIndex < currentQuestions.length - 1) {
+      // Passer à la question suivante
+      currentQuestionIndex++;
+      displayQuestion(currentQuestions[currentQuestionIndex]);
+    } else {
+      // Palier terminé, passer au suivant
+      if (currentPalier < 10) {
+        currentPalier++;
+        loadPalier(currentPalier);
+      } else {
+        // Quiz terminé
+        showQuizCompleted();
+      }
+    }
+  };
+}
+
+function showQuizCompleted() {
+  questionText.textContent = "🎉 Quiz Terminé !";
+  palierTheme.textContent = "Félicitations !";
+  choicesContainer.innerHTML = `
+    <p>Tu as complété tous les paliers !</p>
+    <p>Score final du dernier palier : ${userScore}/${currentQuestions.length}</p>
+    <p>Tu peux recommencer avec un autre sujet.</p>
+  `;
+  explanationContainer.style.display = "none";
+  nextButton.style.display = "block";
+  nextButton.textContent = "Recommencer un quiz";
+  nextButton.onclick = () => {
+    location.reload(); // Recharger la page pour recommencer
+  };
 }
 </script>
 

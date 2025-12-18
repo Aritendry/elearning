@@ -17,8 +17,8 @@ class Post(models.Model):
     slug = models.SlugField(max_length=150 , unique=True , blank=False , null=False)
     author = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     tags = models.ManyToManyField(Domain , blank=True)
-    
-
+    likes = models.ManyToManyField('auth.User' , related_name='post_likes' , blank=True)
+    dislikes = models.ManyToManyField('auth.User' , related_name='post_dislikes' , blank=True)
 
     @property
     def is_video(self):
