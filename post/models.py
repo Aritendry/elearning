@@ -9,7 +9,7 @@ class Domain(models.Model):
 # Create your models here.
 class Post(models.Model):
     title = models.CharField(max_length=100 , blank=False , null=False)
-    content = models.TextField(max_length=600,blank=False , null=False)
+    content = models.TextField(max_length=6000,blank=False , null=False)
     made_ai = models.FloatField(blank=True , null=True)
     fake_news = models.FloatField(blank=True , null=True)
     created_at = models.DateTimeField(auto_now_add=True)

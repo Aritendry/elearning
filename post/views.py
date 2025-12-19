@@ -21,7 +21,7 @@ from django.db.models import Count, Q , Avg
 from collections import defaultdict
 from django.utils import timezone
 
-BYTEZ_KEY = "ed333e5f71baeb5a3f75b54b3db52102"
+BYTEZ_KEY = "f27bec8f81c340c576a382fcdd9dbc4c"
 sdk = Bytez(BYTEZ_KEY)
 model = sdk.model("Qwen/Qwen3-4B-Instruct-2507")
 
@@ -63,43 +63,10 @@ def get_ai_fake_score(text):
 """ Creation du CRUD post"""
 
 @login_required
+# SUPPRIMEZ cette fonction OU gardez-la comme alias
 def create_post(request):
-    if request.method == "POST":
-        title = request.POST.get("title")
-        content = request.POST.get("content")
-        media = request.FILES.get("media")
-        
-        slug = slugify(title)
-        base_slug = slug
-        counter = 1
-        while Post.objects.filter(slug=slug).exists():
-            slug = f"{base_slug}-{counter}"
-            counter += 1
-
-        ia_score, fake_score = get_ai_fake_score(content)
-
-        post = Post(
-            title=title,
-            content=content,
-            media=media,
-            slug=slug,
-            author=request.user,
-            made_ai=ia_score,
-            fake_news=fake_score
-        )
-        post.save()
-
-        # génération des tags - CORRECTION ICI
-        tags = generate_tags(content)
-        for tag_name in tags:
-            # récupère ou crée le Domain correspondant
-            domain_obj, created = Domain.objects.get_or_create(name=tag_name)
-            post.tags.add(domain_obj)  # <-- CHANGER domains en tags
-
-        return redirect('index')
-
-    return render(request, "post/form_post.html") 
-# views.py - Modifie la vue all_post existante
+    """Alias pour post_form (compatibilité)"""
+    return post_form(request)# views.py - Modifie la vue all_post existante
 
 def all_post(request):
     """Affiche les posts avec recommandations personnalisées"""
@@ -128,10 +95,21 @@ def all_post(request):
         'recommended_post_ids': recommended_post_ids
     })
 
-def detail_post(request, slug):
-    post = Post.objects.get(slug=slug)
-    return render(request, 'post/detail_post.html', context={'post': post})
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import Http404
 
+def detail_post(request, slug):
+    try:
+        # Utilisez get_object_or_404 pour gérer les erreurs
+        post = get_object_or_404(Post, slug=slug)
+        return render(request, 'post/detail_post.html', {'post': post})
+    except Post.DoesNotExist:
+        # Redirigez vers la liste des posts ou affichez une erreur 404
+        raise Http404("Post non trouvé")
+    except Exception as e:
+        print(f"Erreur dans detail_post: {e}")
+        return redirect('all_posts')  # Redirige vers la liste
+    
 def view_api_response(request):
     return render(request, 'post/test_api.html')
 
