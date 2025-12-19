@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 import json
 from django.http import JsonResponse
 
-from bytez import Bytez
+
 from django.views.decorators.csrf import csrf_exempt
 
 from django.contrib import messages
@@ -20,6 +20,7 @@ import numpy as np
 from django.db.models import Count, Q , Avg
 from collections import defaultdict
 from django.utils import timezone
+from bytez import Bytez
 
 BYTEZ_KEY = "f27bec8f81c340c576a382fcdd9dbc4c"
 sdk = Bytez(BYTEZ_KEY)
@@ -100,16 +101,105 @@ from django.http import Http404
 
 def detail_post(request, slug):
     try:
-        # Utilisez get_object_or_404 pour gérer les erreurs
         post = get_object_or_404(Post, slug=slug)
-        return render(request, 'post/detail_post.html', {'post': post})
+        
+        # Vérifier si on vient de la traduction
+        is_translated = request.GET.get('translated', False)
+        
+        context = {
+            'post': post,
+            'is_translated': is_translated
+        }
+        
+        return render(request, 'post/detail_post.html', context)
     except Post.DoesNotExist:
-        # Redirigez vers la liste des posts ou affichez une erreur 404
         raise Http404("Post non trouvé")
     except Exception as e:
         print(f"Erreur dans detail_post: {e}")
-        return redirect('all_posts')  # Redirige vers la liste
+        return redirect('all_posts')
+
+def translate_text(text, target_language="French"):
+    """
+    Traduit un texte avec gestion d'erreurs améliorée
+    """
+    if not text or not isinstance(text, str):
+        return ""
     
+    prompt = (
+        f"Traduis ce texte en {target_language}. "
+        f"Conserve le sens, le ton et les nuances. "
+        f"Ne commente pas, ne traduis que le texte. "
+        f"Texte à traduire : '''{text}'''\n\n"
+        f"Traduction :"
+    )
+    
+    try:
+        output = model.run([{"role": "user", "content": prompt}])
+        
+        if output.output and 'content' in output.output:
+            translated = output.output['content'].strip()
+            
+            # Nettoyer la réponse
+            # Enlever les mentions de traduction
+            lines = translated.split('\n')
+            cleaned_lines = []
+            for line in lines:
+                line = line.strip()
+                if line and not any(phrase in line for phrase in ['Traduction:', 'Translation:', 'Note:', 'Note :', 'Note-', 'Note- ']):
+                    cleaned_lines.append(line)
+            
+            result = ' '.join(cleaned_lines)
+            
+            # Si la traduction est vide, retourner l'original
+            if not result:
+                return text
+            
+            return result
+        
+        return text  # Retourner l'original en cas d'échec
+    
+    except Exception as e:
+        print(f"Erreur traduction: {e}")
+        return text  # Retourner l'original en cas d'erreur
+
+@csrf_exempt
+def translate_post(request, slug):
+    """
+    Traduit un post en utilisant l'API Bytez
+    """
+    try:
+        post = get_object_or_404(Post, slug=slug)
+        
+        # Récupérer la langue cible
+        target_language = request.POST.get('target_language', 'French')
+        
+        # Traduire le titre
+        translated_title = translate_text(post.title, target_language)
+        
+        # Traduire le contenu
+        translated_content = translate_text(post.content, target_language)
+        
+        # S'assurer que les valeurs ne sont pas None
+        translated_title = translated_title or post.title
+        translated_content = translated_content or post.content
+        
+        return JsonResponse({
+            'success': True,
+            'translated_title': translated_title,
+            'translated_content': translated_content,
+            'original_language': 'auto',
+            'target_language': target_language
+        })
+        
+    except Exception as e:
+        print(f"Erreur dans translate_post: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'translated_title': post.title if 'post' in locals() else '',
+            'translated_content': post.content if 'post' in locals() else ''
+        }, status=500)
+
 def view_api_response(request):
     return render(request, 'post/test_api.html')
 

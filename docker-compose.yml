@@ -1,0 +1,35 @@
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: elearning_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432"
+
+  # Application Django
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:3000"
+    volumes:
+      - .:/app
+    ports:
+      - "3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:root@db:5432/elearning_db
+      DJANGO_SECRET_KEY: django-insecure-t8u8lbeu(ckri_-rqm-=#*un2kh4^bj)6rtsa%wba#xqxjpn0y
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      BYTEZ_API_KEY: "f27bec8f81c340c576a382fcdd9dbc4c"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

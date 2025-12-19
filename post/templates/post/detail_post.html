@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -14,8 +15,55 @@
     <article class="glass-effect rounded-xl overflow-hidden">
         <!-- En-tête de l'article -->
         <div class="p-6 md:p-8">
-            <!-- Titre -->
-            <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ post.title }}</h1>
+            <!-- Titre et bouton de traduction -->
+            <div class="flex justify-between items-start mb-4">
+                <h1 class="text-3xl font-bold text-gray-900" id="postTitle">{{ post.title }}</h1>
+                
+                <!-- Bouton de traduction -->
+                <div class="relative">
+                    <button id="translationBtn" 
+                            class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-300">
+                        <i class="fas fa-language mr-2"></i>
+                        <span>Traduire</span>
+                        <i class="fas fa-chevron-down ml-2 text-sm"></i>
+                    </button>
+                    
+                    <!-- Menu déroulant des langues -->
+                    <div id="translationMenu" 
+                         class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-10 border border-gray-200 hidden">
+                        <div class="py-1">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 language-option" 
+                               data-lang="fr">
+                                <span class="mr-2">🇫🇷</span> Français
+                            </a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 language-option" 
+                               data-lang="en">
+                                <span class="mr-2">🇬🇧</span> Anglais
+                            </a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 language-option" 
+                               data-lang="es">
+                                <span class="mr-2">🇪🇸</span> Espagnol
+                            </a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 language-option" 
+                               data-lang="de">
+                                <span class="mr-2">🇩🇪</span> Allemand
+                            </a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" 
+                               id="showOriginalBtn">
+                                <span class="mr-2">↩️</span> Version originale
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indicateur de traduction en cours -->
+            <div id="translationLoading" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center">
+                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                    <span class="text-blue-700">Traduction en cours... (cela peut prendre quelques secondes)</span>
+                </div>
+            </div>
 
             <!-- Métadonnées -->
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -65,78 +113,131 @@
                 {% endfor %}
             </div>
             {% endif %}
-{% if post.made_ai is not None or post.fake_news is not None %}
-<div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-    <h3 class="text-sm font-medium text-gray-700 mb-3">Analyse automatique</h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {% if post.made_ai is not None %}
-        <div>
-            <div class="flex justify-between text-sm mb-1">
-                <span class="text-gray-600">Probabilité IA</span>
-                <span class="font-medium text-primary-600">
-                    {{ post.made_ai|floatformat:0 }}%
-                </span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div class="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-500" 
-                     style="width: {% widthratio post.made_ai 100 100 %}%"></div>
-            </div>
-            <p class="text-xs text-gray-500 mt-1">Probabilité que le contenu soit généré par une IA</p>
-        </div>
-        {% endif %}
 
-        {% if post.fake_news is not None %}
-        <div>
-            <div class="flex justify-between text-sm mb-1">
-                <span class="text-gray-600">Risque Fake News</span>
-                <span class="font-medium {% if post.fake_news > 50 %}text-red-600{% else %}text-green-600{% endif %}">
-                    {{ post.fake_news|floatformat:0 }}%
-                </span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div class="{% if post.fake_news > 50 %}bg-gradient-to-r from-red-500 to-red-600{% else %}bg-gradient-to-r from-green-500 to-green-600{% endif %} h-2 rounded-full transition-all duration-500" 
-                     style="width: {% widthratio post.fake_news 100 100 %}%"></div>
-            </div>
-            <p class="text-xs text-gray-500 mt-1">Probabilité que le contenu contienne des informations trompeuses</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
+            <!-- Analyse automatique -->
+            {% if post.made_ai is not None or post.fake_news is not None %}
+            <div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Analyse automatique</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% if post.made_ai is not None %}
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">Probabilité IA</span>
+                            <span class="font-medium text-primary-600">
+                                {{ post.made_ai|floatformat:0 }}%
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div class="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-500" 
+                                 style="width: {% widthratio post.made_ai 100 100 %}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Probabilité que le contenu soit généré par une IA</p>
+                    </div>
+                    {% endif %}
 
-            <!-- Contenu -->
-            <div class="prose prose-lg max-w-none mb-8">
-                <div class="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {{ post.content|linebreaks }}
+                    {% if post.fake_news is not None %}
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">Risque Fake News</span>
+                            <span class="font-medium {% if post.fake_news > 50 %}text-red-600{% else %}text-green-600{% endif %}">
+                                {{ post.fake_news|floatformat:0 }}%
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div class="{% if post.fake_news > 50 %}bg-gradient-to-r from-red-500 to-red-600{% else %}bg-gradient-to-r from-green-500 to-green-600{% endif %} h-2 rounded-full transition-all duration-500" 
+                                 style="width: {% widthratio post.fake_news 100 100 %}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Probabilité que le contenu contienne des informations trompeuses</p>
+                    </div>
+                    {% endif %}
                 </div>
-            </div>
-
-            <!-- Média -->
-            {% if post.media %}
-            <div class="mb-8">
-                {% if post.is_video %}
-                <div class="rounded-lg overflow-hidden shadow-lg">
-                    <video controls class="w-full max-h-96 object-contain bg-black">
-                        <source src="{{ post.media.url }}" type="video/mp4">
-                        Votre navigateur ne supporte pas la lecture de vidéos.
-                    </video>
-                </div>
-                <p class="text-sm text-gray-500 mt-2 text-center">
-                    <i class="fas fa-video mr-1"></i>Vidéo attachée à l'article
-                </p>
-                {% else %}
-                <div class="rounded-lg overflow-hidden shadow-lg">
-                    <img src="{{ post.media.url }}" 
-                         alt="{{ post.title }}" 
-                         class="w-full max-h-96 object-contain bg-gray-100"
-                         onerror="this.onerror=null; this.src='#'; this.alt='Image non disponible'">
-                </div>
-                <p class="text-sm text-gray-500 mt-2 text-center">
-                    <i class="fas fa-image mr-1"></i>Image attachée à l'article
-                </p>
-                {% endif %}
             </div>
             {% endif %}
+
+            <!-- Contenu original -->
+            <div id="originalContent">
+                <!-- Contenu -->
+                <div class="prose prose-lg max-w-none mb-8">
+                    <div class="text-gray-700 whitespace-pre-wrap leading-relaxed" id="postContent">
+                        {{ post.content|linebreaks }}
+                    </div>
+                </div>
+
+                <!-- Média -->
+                {% if post.media %}
+                <div class="mb-8">
+                    {% if post.is_video %}
+                    <div class="rounded-lg overflow-hidden shadow-lg">
+                        <video controls class="w-full max-h-96 object-contain bg-black">
+                            <source src="{{ post.media.url }}" type="video/mp4">
+                            Votre navigateur ne supporte pas la lecture de vidéos.
+                        </video>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2 text-center">
+                        <i class="fas fa-video mr-1"></i>Vidéo attachée à l'article
+                    </p>
+                    {% else %}
+                    <div class="rounded-lg overflow-hidden shadow-lg">
+                        <img src="{{ post.media.url }}" 
+                             alt="{{ post.title }}" 
+                             class="w-full max-h-96 object-contain bg-gray-100"
+                             onerror="this.onerror=null; this.src='#'; this.alt='Image non disponible'">
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2 text-center">
+                        <i class="fas fa-image mr-1"></i>Image attachée à l'article
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Contenu traduit (caché par défaut) -->
+            <div id="translatedContent" class="hidden">
+                <!-- Indicateur de traduction -->
+                <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fas fa-language text-blue-600 mr-2"></i>
+                        <span class="text-blue-700 font-medium" id="translationLanguageLabel">Traduction en Français</span>
+                    </div>
+                    <p class="text-xs text-blue-600 mt-1">
+                        Ceci est une traduction automatique par IA. La précision peut varier.
+                    </p>
+                </div>
+
+                <!-- Contenu traduit -->
+                <div class="prose prose-lg max-w-none mb-8">
+                    <div class="text-gray-700 whitespace-pre-wrap leading-relaxed" id="translatedText">
+                        <!-- Le contenu traduit sera inséré ici -->
+                    </div>
+                </div>
+
+                <!-- Média (même que l'original) -->
+                {% if post.media %}
+                <div class="mb-8">
+                    {% if post.is_video %}
+                    <div class="rounded-lg overflow-hidden shadow-lg">
+                        <video controls class="w-full max-h-96 object-contain bg-black">
+                            <source src="{{ post.media.url }}" type="video/mp4">
+                            Votre navigateur ne supporte pas la lecture de vidéos.
+                        </video>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2 text-center">
+                        <i class="fas fa-video mr-1"></i>Vidéo attachée à l'article
+                    </p>
+                    {% else %}
+                    <div class="rounded-lg overflow-hidden shadow-lg">
+                        <img src="{{ post.media.url }}" 
+                             alt="{{ post.title }}" 
+                             class="w-full max-h-96 object-contain bg-gray-100"
+                             onerror="this.onerror=null; this.src='#'; this.alt='Image non disponible'">
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2 text-center">
+                        <i class="fas fa-image mr-1"></i>Image attachée à l'article
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
 
             <!-- Informations complémentaires -->
             <div class="border-t border-gray-200 pt-6 mt-8">
@@ -184,7 +285,7 @@
                         <i class="fas fa-redo mr-2"></i>Actualiser
                     </button>
                     {% if user == post.author %}
-                    <a href="#" class="px-4 py-2 rounded-lg btn-primary font-medium">
+                    <a href="{% url 'update_post' post.slug %}" class="px-4 py-2 rounded-lg btn-primary font-medium">
                         <i class="fas fa-edit mr-2"></i>Modifier
                     </a>
                     {% endif %}
@@ -213,39 +314,209 @@
 </div>
 
 <script>
-// Script pour gérer les likes/dislikes
-document.addEventListener('DOMContentLoaded', function() {
-    // Fonction pour récupérer le token CSRF
-    function getCsrfToken() {
-        const cookieValue = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1];
-        return cookieValue || '';
-    }
+// Fonction pour obtenir le token CSRF
+function getCsrfToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return cookieValue || '';
+}
 
-    // Fonction pour mettre à jour un bouton
-    function updateButton(button, isActive, type) {
-        if (type === 'like') {
-            if (isActive) {
-                button.classList.add('bg-primary-50', 'text-primary-600', 'border-primary-200');
-                button.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
-            } else {
-                button.classList.remove('bg-primary-50', 'text-primary-600', 'border-primary-200');
-                button.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+// Configuration des langues
+const languageConfig = {
+    'fr': { name: 'Français', flag: '🇫🇷', code: 'French' },
+    'en': { name: 'Anglais', flag: '🇬🇧', code: 'English' },
+    'es': { name: 'Espagnol', flag: '🇪🇸', code: 'Spanish' },
+    'de': { name: 'Allemand', flag: '🇩🇪', code: 'German' }
+};
+
+// Variables d'état
+let isTranslated = false;
+let currentTranslation = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du menu déroulant
+    const translationBtn = document.getElementById('translationBtn');
+    const translationMenu = document.getElementById('translationMenu');
+    
+    // Afficher/masquer le menu au clic
+    if (translationBtn) {
+        translationBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (translationMenu) {
+                translationMenu.classList.toggle('hidden');
             }
-        } else if (type === 'dislike') {
-            if (isActive) {
-                button.classList.add('bg-accent-50', 'text-accent-600', 'border-accent-200');
-                button.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+        });
+    }
+    
+    // Fermer le menu en cliquant ailleurs
+    document.addEventListener('click', function() {
+        if (translationMenu) {
+            translationMenu.classList.add('hidden');
+        }
+    });
+    
+    // Empêcher la fermeture du menu quand on clique dedans
+    if (translationMenu) {
+        translationMenu.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+    
+    // Gestion des options de langue
+    document.querySelectorAll('.language-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            const lang = this.getAttribute('data-lang');
+            translateArticle(lang);
+            if (translationMenu) {
+                translationMenu.classList.add('hidden');
+            }
+        });
+    });
+    
+    // Bouton pour revenir à l'original
+    const showOriginalBtn = document.getElementById('showOriginalBtn');
+    if (showOriginalBtn) {
+        showOriginalBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            showOriginal();
+            if (translationMenu) {
+                translationMenu.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Fonction de traduction
+    async function translateArticle(lang) {
+        const language = languageConfig[lang];
+        if (!language) {
+            console.error('Langue non supportée:', lang);
+            return;
+        }
+        
+        // Afficher l'indicateur de chargement
+        const loadingElement = document.getElementById('translationLoading');
+        if (loadingElement) {
+            loadingElement.classList.remove('hidden');
+        }
+        
+        try {
+            // Récupérer le slug de l'URL actuelle
+            const pathParts = window.location.pathname.split('/');
+            const slug = pathParts[2]; // Format: /post/{slug}/
+            
+            if (!slug) {
+                throw new Error('Slug non trouvé dans l\'URL');
+            }
+            
+            // Envoyer la requête de traduction
+            const response = await fetch(`/post/${slug}/translate/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `target_language=${language.code}`
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Stocker la traduction
+                currentTranslation = {
+                    language: lang,
+                    title: data.translated_title || '',
+                    content: data.translated_content || ''
+                };
+                
+                // Afficher la traduction
+                const originalContent = document.getElementById('originalContent');
+                const translatedContent = document.getElementById('translatedContent');
+                const translatedText = document.getElementById('translatedText');
+                const translationLanguageLabel = document.getElementById('translationLanguageLabel');
+                
+                if (originalContent) originalContent.classList.add('hidden');
+                if (translatedContent) translatedContent.classList.remove('hidden');
+                
+                // Mettre à jour le contenu traduit avec vérification
+                if (translatedText && data.translated_content) {
+                    const safeContent = data.translated_content.toString();
+                    translatedText.innerHTML = safeContent.replace(/\n/g, '<br>');
+                } else if (translatedText) {
+                    translatedText.innerHTML = '<p class="text-gray-500">Traduction non disponible.</p>';
+                }
+                
+                if (translationLanguageLabel) {
+                    translationLanguageLabel.textContent = `Traduction en ${language.name}`;
+                }
+                
+                // Mettre à jour l'état
+                isTranslated = true;
+                
+                // Afficher une notification
+                showNotification(`Traduit en ${language.name} avec succès!`, 'success');
             } else {
-                button.classList.remove('bg-accent-50', 'text-accent-600', 'border-accent-200');
-                button.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                showNotification('Erreur lors de la traduction: ' + (data.error || 'Erreur inconnue'), 'error');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            showNotification('Une erreur est survenue lors de la traduction: ' + error.message, 'error');
+        } finally {
+            // Cacher l'indicateur de chargement
+            if (loadingElement) {
+                loadingElement.classList.add('hidden');
             }
         }
     }
-
-    // Gérer les likes
+    
+    // Fonction pour revenir à l'original
+    function showOriginal() {
+        if (!isTranslated) return;
+        
+        const originalContent = document.getElementById('originalContent');
+        const translatedContent = document.getElementById('translatedContent');
+        
+        if (originalContent) originalContent.classList.remove('hidden');
+        if (translatedContent) translatedContent.classList.add('hidden');
+        
+        isTranslated = false;
+        currentTranslation = null;
+        
+        showNotification('Version originale affichée', 'info');
+    }
+    
+    // Fonction d'affichage des notifications
+    function showNotification(message, type) {
+        // Créer une alerte
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+            type === 'success' ? 'bg-green-100 border-green-400 text-green-700' :
+            type === 'error' ? 'bg-red-100 border-red-400 text-red-700' :
+            'bg-blue-100 border-blue-400 text-blue-700'
+        } border`;
+        
+        alertDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Ajouter à la page
+        document.body.appendChild(alertDiv);
+        
+        // Auto-supprimer après 5 secondes
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    
+    // Initialiser les boutons likes/dislikes
     document.querySelectorAll('.like-btn').forEach(button => {
         button.addEventListener('click', async function() {
             const postId = this.dataset.postId;
@@ -266,23 +537,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     // Mettre à jour le bouton like
                     this.dataset.liked = data.liked.toString();
-                    updateButton(this, data.liked, 'like');
+                    
+                    if (data.liked) {
+                        this.classList.add('bg-primary-50', 'text-primary-600', 'border-primary-200');
+                        this.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                    } else {
+                        this.classList.remove('bg-primary-50', 'text-primary-600', 'border-primary-200');
+                        this.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                    }
                     
                     // Mettre à jour le compteur
                     const likeCount = this.querySelector('.like-count');
                     if (likeCount) {
                         likeCount.textContent = data.like_count;
-                        likeCount.classList.add('score-animation');
-                        setTimeout(() => {
-                            likeCount.classList.remove('score-animation');
-                        }, 300);
                     }
                     
                     // Mettre à jour le bouton dislike
                     const dislikeBtn = document.querySelector('.dislike-btn');
                     if (dislikeBtn) {
                         dislikeBtn.dataset.disliked = 'false';
-                        updateButton(dislikeBtn, false, 'dislike');
+                        dislikeBtn.classList.remove('bg-accent-50', 'text-accent-600', 'border-accent-200');
+                        dislikeBtn.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
                         
                         // Mettre à jour le compteur dislike
                         const dislikeCount = dislikeBtn.querySelector('.dislike-count');
@@ -290,21 +565,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             dislikeCount.textContent = data.dislike_count;
                         }
                     }
-                    
-                    // Afficher une notification
-                    if (data.liked) {
-                        showToast('Article liké ! Merci pour votre retour.', 'success');
-                    } else {
-                        showToast('Like retiré', 'info');
-                    }
                 }
             } catch (error) {
                 console.error('Erreur:', error);
-                showToast('Erreur lors du like', 'error');
+                showNotification('Erreur lors du like', 'error');
             }
         });
     });
-
+    
     // Gérer les dislikes
     document.querySelectorAll('.dislike-btn').forEach(button => {
         button.addEventListener('click', async function() {
@@ -326,23 +594,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     // Mettre à jour le bouton dislike
                     this.dataset.disliked = data.disliked.toString();
-                    updateButton(this, data.disliked, 'dislike');
+                    
+                    if (data.disliked) {
+                        this.classList.add('bg-accent-50', 'text-accent-600', 'border-accent-200');
+                        this.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                    } else {
+                        this.classList.remove('bg-accent-50', 'text-accent-600', 'border-accent-200');
+                        this.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+                    }
                     
                     // Mettre à jour le compteur
                     const dislikeCount = this.querySelector('.dislike-count');
                     if (dislikeCount) {
                         dislikeCount.textContent = data.dislike_count;
-                        dislikeCount.classList.add('score-animation');
-                        setTimeout(() => {
-                            dislikeCount.classList.remove('score-animation');
-                        }, 300);
                     }
                     
                     // Mettre à jour le bouton like
                     const likeBtn = document.querySelector('.like-btn');
                     if (likeBtn) {
                         likeBtn.dataset.liked = 'false';
-                        updateButton(likeBtn, false, 'like');
+                        likeBtn.classList.remove('bg-primary-50', 'text-primary-600', 'border-primary-200');
+                        likeBtn.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
                         
                         // Mettre à jour le compteur like
                         const likeCount = likeBtn.querySelector('.like-count');
@@ -350,28 +622,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             likeCount.textContent = data.like_count;
                         }
                     }
-                    
-                    // Afficher une notification
-                    if (data.disliked) {
-                        showToast('Article disliké. Vos préférences ont été mises à jour.', 'info');
-                    } else {
-                        showToast('Dislike retiré', 'info');
-                    }
                 }
             } catch (error) {
                 console.error('Erreur:', error);
-                showToast('Erreur lors du dislike', 'error');
+                showNotification('Erreur lors du dislike', 'error');
             }
         });
-    });
-
-    // Initialiser les états des boutons
-    document.querySelectorAll('.like-btn[data-liked="true"]').forEach(btn => {
-        updateButton(btn, true, 'like');
-    });
-    
-    document.querySelectorAll('.dislike-btn[data-disliked="true"]').forEach(btn => {
-        updateButton(btn, true, 'dislike');
     });
 });
 
@@ -409,6 +665,19 @@ style.textContent = `
         .glass-effect {
             padding: 1rem !important;
         }
+    }
+    
+    .translate-btn {
+        transition: all 0.3s ease;
+    }
+    
+    .translate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    #translationLoading {
+        transition: opacity 0.3s ease;
     }
 `;
 document.head.appendChild(style);

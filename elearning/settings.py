@@ -81,7 +81,7 @@ DATABASES = {
         'NAME': 'elearning_db',      # Nom de votre base de données
         'USER': 'postgres',          # Nom d'utilisateur par défaut
         'PASSWORD': 'root',          # Votre mot de passe
-        'HOST': 'localhost',         # Ou '127.0.0.1'
+        'HOST': 'db',         # Ou '127.0.0.1'
         'PORT': '5432',              # Port par défaut de PostgreSQL
     }
 }

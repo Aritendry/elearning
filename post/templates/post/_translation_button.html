@@ -1,0 +1,24 @@
+<!-- Bouton de traduction avec menu déroulant -->
+<div class="dropdown d-inline-block ms-2">
+    <button class="btn btn-outline-primary dropdown-toggle" type="button" 
+            id="translationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        🌐 Traduire
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="translationDropdown">
+        <li><a class="dropdown-item translate-btn" href="#" data-lang="fr">🇫🇷 Français</a></li>
+        <li><a class="dropdown-item translate-btn" href="#" data-lang="en">🇬🇧 Anglais</a></li>
+        <li><a class="dropdown-item translate-btn" href="#" data-lang="es">🇪🇸 Espagnol</a></li>
+        <li><a class="dropdown-item translate-btn" href="#" data-lang="de">🇩🇪 Allemand</a></li>
+        <li><a class="dropdown-item translate-btn" href="#" data-lang="ar">🇸🇦 Arabe</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" id="showOriginal">↩️ Version originale</a></li>
+    </ul>
+</div>
+
+<!-- Indicateur de chargement -->
+<div id="translationLoading" class="alert alert-info d-none" role="alert">
+    <div class="d-flex align-items-center">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        <span>Traduction en cours... (cela peut prendre quelques secondes)</span>
+    </div>
+</div>
